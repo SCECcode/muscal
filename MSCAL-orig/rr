@@ -1,0 +1,4 @@
+
+#./oreadNetcdf ./model_updated_CenCal2.nc "longitude"
+
+./readNetcdf ./model_updated_CenCal2.nc -116.905 36.725 2000

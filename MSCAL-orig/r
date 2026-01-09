@@ -1,0 +1,7 @@
+
+cc -g -c um_netcdf.c -o um_netcdf.o -I$UCVM_INSTALL_PATH/lib/hdf5/include -I$UCVM_INSTALL_PATH/lib/netcdf/include 
+cc -g -c readNetcdf.c -o readNetcdf.o -I$UCVM_INSTALL_PATH/lib/hdf5/include -I$UCVM_INSTALL_PATH/lib/netcdf/include 
+cc readNetcdf.o um_netcdf.o -g -o readNetcdf -I$UCVM_INSTALL_PATH/lib/hdf5/include -I$UCVM_INSTALL_PATH/lib/netcdf/include -L$UCVM_INSTALL_PATH/lib/hdf5/lib -lhdf5 -L$UCVM_INSTALL_PATH/lib/netcdf/lib -lnetcdf -lm
+
+#cc -g -c oldreadNetcdf.c -o oreadNetcdf.o -I$UCVM_INSTALL_PATH/lib/hdf5/include -I$UCVM_INSTALL_PATH/lib/netcdf/include 
+#cc oreadNetcdf.o -g -o oreadNetcdf -L$UCVM_INSTALL_PATH/lib/hdf5/lib -lhdf5 -L$UCVM_INSTALL_PATH/lib/netcdf/lib -lnetcdf -lm

@@ -1,0 +1,34 @@
+#ifndef UM_NETCDF_H
+#define UM_NETCDF_H
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stddef.h>
+#include <math.h>
+#include <netcdf.h>
+
+/* Simple error-handling macro */
+#define NC_CHECK(status)                                        \
+    do {                                                        \
+        if ((status) != NC_NOERR) {                             \
+            fprintf(stderr, "NetCDF error: %s\n",               \
+                    nc_strerror(status));                       \
+            exit(EXIT_FAILURE);                                 \
+        }                                                       \
+    } while (0)
+
+
+int open_nc(const char* path);
+int inq_nc_varid(int ncid, const char* varname, const char* path);
+int inq_nc_var(int ncid, int varid, nc_type *vtype, int *ndims, int **dimids, size_t **dimlens);
+
+int print_nc_buffer_offset(nc_type vtype, int offset, void *buffer);
+void *get_nc_buffer(int ncid, const char *varname, const char *path, nc_type *vtype, size_t *nelems, int e_dimlens);
+
+int find_buffer_idx(float *buffer, size_t nelems, float target);
+
+#endif
+
+
+
