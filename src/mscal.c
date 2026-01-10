@@ -7,10 +7,8 @@
  *
  */
 
-#include "limits.h"
 #include "ucvm_model_dtypes.h"
 #include "mscal.h"
-#include <assert.h>
 
 int mscal_debug=0;
 

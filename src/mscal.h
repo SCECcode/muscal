@@ -1,8 +1,9 @@
 /**
  * @file mscal.h
- * @brief Main header file for mscal library.
+ * @brief Main header file for MSCAL library.
  * @version 1.0
  *
+ * Delivers the MSCAL model 
  *
  */
 
@@ -13,14 +14,7 @@
 #include <unistd.h>
 #include <math.h>
 
-#include "proj.h"
 
-// Constants
-#ifndef M_PI
-	/** Defines pi */
-	#define M_PI 3.14159265358979323846
-#endif
-#define DEG_TO_RAD M_PI / 180.0
 
 /** Defines a return value of success */
 #define SUCCESS 0
@@ -55,12 +49,21 @@ typedef struct mscal_properties_t {
 	double qs;
 } mscal_properties_t;
 
-/** The CVM-S5 configuration structure. */
+/**
+Dimensions: 3
+  dim[0] name=depth len=84
+  dim[1] name=latitude len=381
+  dim[2] name=longitude len=471
+Total elements: 15073884
+**/
+/** The MSCAL configuration structure. */
 typedef struct mscal_configuration_t {
 	/** The zone of UTM projection */
 	int utm_zone;
 	/** The model directory */
 	char model_dir[128];
+        /** GTL on or off (1 or 0) */
+        int gtl;
 	/** Number of x points */
 	int nx;
 	/** Number of y points */
@@ -69,31 +72,14 @@ typedef struct mscal_configuration_t {
 	int nz;
 	/** Depth in meters */
 	double depth;
-	/** Top left corner easting in UTM projection */
-	double top_left_corner_e;
-	/** Top left corner northing in UTM projection */
-	double top_left_corner_n;
-	/** Top right corner easting in UTM projection */
-	double top_right_corner_e;
-	/** Top right corner northing in UTM projection */
-	double top_right_corner_n;
-	/** Bottom left corner easting in UTM projection */
-	double bottom_left_corner_e;
-	/** Bottom left corner northing in UTM projection */
-	double bottom_left_corner_n;
-	/** Bottom right corner easting in UTM projection */
-	double bottom_right_corner_e;
-	/** Bottom right corner northing in UTM projection */
-	double bottom_right_corner_n;
-	/** Z interval for the data */
-	double depth_interval;
-        /** The data access seek method, fast-X, or fast-Y */
-        char seek_axis[128];
-        /** The data seek direction, bottom-up, or top-down */
-        char seek_direction[128];
-        /** trilinear interploation; */
-        int interpolation;
+	/** list of latitudes **/
+	float *latitudes;
+	/** list of longitudes **/
+	float *longitudes;
+	/** list of depths **/
+	float *depths;
 } mscal_configuration_t;
+
 
 /** The model structure which points to available portions of the model. */
 typedef struct mscal_model_t {
@@ -119,7 +105,22 @@ typedef struct mscal_model_t {
 	int qs_status;
 } mscal_model_t;
 
+// Constants
+/** The version of the model. */
+const char *mscal_version_string = "MSCAL";
+
+// Variables
+/** Set to 1 when the model is ready for query. */
+int mscal_is_initialized = 0;
+
+/** Configuration parameters. */
+mscal_configuration_t *mscal_configuration;
+
+/** Holds pointers to the velocity model data OR indicates it can be read from file. */
+mscal_model_t *mscal_velocity_model;
+
 // UCVM API Required Functions
+
 #ifdef DYNAMIC_LIBRARY
 
 /** Initializes the model */
@@ -130,17 +131,15 @@ int model_finalize();
 int model_version(char *ver, int len);
 /** Queries the model */
 int model_query(mscal_point_t *points, mscal_properties_t *data, int numpts);
-int model_config(char **config, int *sz);
 
 int (*get_model_init())(const char *, const char *);
 int (*get_model_query())(mscal_point_t *, mscal_properties_t *, int);
 int (*get_model_finalize())();
 int (*get_model_version())(char *, int);
-int (*get_model_config())(char **, int*);
 
 #endif
 
-// mscal Related Functions
+// MSCAL Related Functions
 
 /** Initializes the model */
 int mscal_init(const char *dir, const char *label);
@@ -154,19 +153,9 @@ int mscal_query(mscal_point_t *points, mscal_properties_t *data, int numpts);
 // Non-UCVM Helper Functions
 /** Reads the configuration file. */
 int mscal_read_configuration(char *file, mscal_configuration_t *config);
-int mscal_dump_configuration(mscal_configuration_t *config);
 /** Prints out the error string. */
 void mscal_print_error(char *err);
 /** Retrieves the value at a specified grid point in the model. */
 void mscal_read_properties(int x, int y, int z, mscal_properties_t *data);
 /** Attempts to malloc the model size in memory and read it in. */
 int mscal_try_reading_model(mscal_model_t *model);
-
-// Interpolation Functions
-/** Linearly interpolates two mscal_properties_t structures */
-void mscal_linear_interpolation(double percent, mscal_properties_t *x0, mscal_properties_t *x1, mscal_properties_t *ret_properties);
-/** Bilinearly interpolates the properties. */
-void mscal_bilinear_interpolation(double x_percent, double y_percent, mscal_properties_t *four_points, mscal_properties_t *ret_properties);
-/** Trilinearly interpolates the properties. */
-void mscal_trilinear_interpolation(double x_percent, double y_percent, double z_percent, mscal_properties_t *eight_points,
-							 mscal_properties_t *ret_properties);

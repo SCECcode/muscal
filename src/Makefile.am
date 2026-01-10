@@ -1,5 +1,7 @@
 # Autoconf/automake file
 
+objects = um_netcdf.o
+
 # General compiler/linker flags
 AM_CFLAGS = ${CFLAGS} 
 AM_LDFLAGS = ${LDFLAGS} -lm
@@ -21,10 +23,10 @@ clean:
 	rm -rf $(TARGETS)
 	rm -rf *.o
 
-libmscal.a: mscal_static.o
+libmscal.a: mscal_static.o um_netcdf.o
 	$(AR) rcs $@ $^
 
-libmscal.so: mscal.o 
+libmscal.so: mscal.o  um_netcdf.o 
 	$(CC) -shared $(AM_FCFLAGS) -o libmscal.so $^ $(AM_LDFLAGS)
 
 mscal.o: mscal.c
@@ -32,4 +34,9 @@ mscal.o: mscal.c
 
 mscal_static.o: mscal.c
 	$(CC) -o $@ -c $^ $(AM_CFLAGS)
+
+$(objects): %.o: %.c
+	$(CC) -o $@ -c $^ $(AM_CFLAGS)
+
+
 
