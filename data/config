@@ -5,5 +5,7 @@ utm_zone = 10
 model_dir = mscal
 model_data_path  = https://g-3a9041.a78b8.36fe.data.globus.org/ucvm/models
 
+data_file = { "LABEL" : "mscal1", "FILE" : "model_updated_CenCal2.nc" }
+
 # interpolation on or off?
 interpolation = off 

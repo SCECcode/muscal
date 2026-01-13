@@ -23,11 +23,14 @@ clean:
 	rm -rf $(TARGETS)
 	rm -rf *.o
 
-libmscal.a: mscal_static.o um_netcdf.o
+libmscal.a: mscal_static.o um_netcdf.o cJSON.o
 	$(AR) rcs $@ $^
 
-libmscal.so: mscal.o  um_netcdf.o 
+libmscal.so: mscal.o  um_netcdf.o cJSON.o
 	$(CC) -shared $(AM_FCFLAGS) -o libmscal.so $^ $(AM_LDFLAGS)
+
+cJSON.o: cJSON.c
+	$(CC) -fPIC -DDYNAMIC_LIBRARY $(AM_CFLAGS) -o $@ -c $^
 
 mscal.o: mscal.c
 	$(CC) -fPIC -DDYNAMIC_LIBRARY -o $@ -c $^ $(AM_CFLAGS)

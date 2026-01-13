@@ -31,18 +31,6 @@ mscal_configuration_t *mscal_configuration;
 /** Holds pointers to the velocity model data OR indicates it can be read from file. */
 mscal_model_t *mscal_velocity_model;
 
-/** Proj coordinate transformation objects. can go from geo <-> utm */
-PJ *mscal_geo2utm = NULL;
-
-/** The cosine of the rotation angle used to rotate the box and point around the bottom-left corner. */
-double mscal_cos_rotation_angle = 0;
-/** The sine of the rotation angle used to rotate the box and point around the bottom-left corner. */
-double mscal_sin_rotation_angle = 0;
-
-/** The height of this model's region, in meters. */
-double mscal_total_height_m = 0;
-/** The width of this model's region, in meters. */
-double mscal_total_width_m = 0;
 /**
  * Initializes the mscal plugin model within the UCVM framework. In order to initialize
  * the model, we must provide the UCVM install path and optionally a place in memory
@@ -552,7 +540,7 @@ int mscal_config(char **config, int *sz)
 
 
 /**
- * Reads the mscal_configuration file describing the various properties of CVM-S5 and populates
+ * Reads the mscal_configuration file describing the various properties of MSCAL and populates
  * the mscal_configuration struct. This assumes mscal_configuration has been "calloc'ed" and validates
  * that each value is not zero at the end.
  *
@@ -563,7 +551,7 @@ int mscal_config(char **config, int *sz)
 int mscal_read_configuration(char *file, mscal_configuration_t *config) {
     FILE *fp = fopen(file, "r");
     char key[40];
-    char value[80];
+    char value[100];
     char line_holder[128];
 
     // If our file pointer is null, an error has occurred. Return fail.
@@ -572,6 +560,7 @@ int mscal_read_configuration(char *file, mscal_configuration_t *config) {
         return FAIL;
     }
 
+    config->dataset_cnt = 0 ; 
     // Read the lines in the mscal_configuration file.
     while (fgets(line_holder, sizeof(line_holder), fp) != NULL) {
         if (line_holder[0] != '#' && line_holder[0] != ' ' && line_holder[0] != '\n') {
@@ -580,35 +569,22 @@ int mscal_read_configuration(char *file, mscal_configuration_t *config) {
             // Which variable are we editing?
             if (strcmp(key, "utm_zone") == 0) config->utm_zone = atoi(value);
             if (strcmp(key, "model_dir") == 0) sprintf(config->model_dir, "%s", value);
-            if (strcmp(key, "nx") == 0) config->nx = atoi(value);
-            if (strcmp(key, "ny") == 0) config->ny = atoi(value);
-            if (strcmp(key, "nz") == 0) config->nz = atoi(value);
-            if (strcmp(key, "depth") == 0) config->depth = atof(value);
-            if (strcmp(key, "top_left_corner_e") == 0) config->top_left_corner_e = atof(value);
-            if (strcmp(key, "top_left_corner_n") == 0) config->top_left_corner_n = atof(value);
-            if (strcmp(key, "top_right_corner_e") == 0) config->top_right_corner_e = atof(value);
-            if (strcmp(key, "top_right_corner_n") == 0) config->top_right_corner_n = atof(value);
-            if (strcmp(key, "bottom_left_corner_e") == 0) config->bottom_left_corner_e = atof(value);
-            if (strcmp(key, "bottom_left_corner_n") == 0) config->bottom_left_corner_n = atof(value);
-            if (strcmp(key, "bottom_right_corner_e") == 0) config->bottom_right_corner_e = atof(value);
-            if (strcmp(key, "bottom_right_corner_n") == 0) config->bottom_right_corner_n = atof(value);
-            if (strcmp(key, "depth_interval") == 0) config->depth_interval = atof(value);
-            if (strcmp(key, "seek_axis") == 0) sprintf(config->seek_axis, "%s", value);
-            if (strcmp(key, "seek_direction") == 0) sprintf(config->seek_direction, "%s", value);
             if (strcmp(key, "interpolation") == 0) { 
                 config->interpolation=0;
                 if (strcmp(value,"on") == 0) config->interpolation=1;
+            }
+	    /* for each data_file, allocate a mscal configurtion dataset's block and fill in */ 
+            if (strcmp(key, "data_file") == 0) { 
+		int rc=_mscal_nc_configuration(value);
+	        if(rc == 1 ) {
+	            config->dataset_cnt++;
+                }
             }
         }
     }
 
     // Have we set up all mscal_configuration parameters?
-    if (config->utm_zone == 0 || config->nx == 0 || config->ny == 0 || config->nz == 0 || config->model_dir[0] == '\0' || 
-        config->seek_direction[0] == '\0' || config->seek_axis[0] == '\0' ||
-        config->top_left_corner_e == 0 || config->top_left_corner_n == 0 || config->top_right_corner_e == 0 ||
-        config->top_right_corner_n == 0 || config->bottom_left_corner_e == 0 || config->bottom_left_corner_n == 0 ||
-        config->bottom_right_corner_e == 0 || config->bottom_right_corner_n == 0 || config->depth == 0 ||
-        config->depth_interval == 0) {
+    if (config->utm_zone == 0 || config->model_dir[0] == '\0' || config->dataset_cnt == 0 ) {
         mscal_print_error("One mscal_configuration parameter not specified. Please check your mscal_configuration file.");
         return FAIL;
     }
@@ -616,6 +592,15 @@ int mscal_read_configuration(char *file, mscal_configuration_t *config) {
     fclose(fp);
 
     return SUCCESS;
+}
+
+/**
+ * Extract mscal netcdf dataest specific info
+ *
+ * @param 
+ */
+int _mscal_nc_configuration(char *blob) {
+XXX
 }
 
 /**

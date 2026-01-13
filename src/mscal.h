@@ -14,8 +14,6 @@
 #include <unistd.h>
 #include <math.h>
 
-
-
 /** Defines a return value of success */
 #define SUCCESS 0
 /** Defines a return value of failure */
@@ -56,7 +54,59 @@ Dimensions: 3
   dim[2] name=longitude len=471
 Total elements: 15073884
 **/
+
 /** The MSCAL configuration structure. */
+
+/** The model structure which points to available portions of the model. */
+typedef struct mscal_model_t {
+        /** A pointer to the Vs data either in memory or disk. Null if does not exist. */
+        void *vs;
+        /** Vs status: 0 = not found, 1 = found and not in memory, 2 = found and in memory */
+        int vs_status;
+        /** A pointer to the Vp data either in memory or disk. Null if does not exist. */
+        void *vp;
+        /** Vp status: 0 = not found, 1 = found and not in memory, 2 = found and in memory */
+        int vp_status;
+        /** A pointer to the rho data either in memory or disk. Null if does not exist. */
+        void *rho;
+        /** Rho status: 0 = not found, 1 = found and not in memory, 2 = found and in memory */
+        int rho_status;
+        /** A pointer to the Qp data either in memory or disk. Null if does not exist. */
+        void *qp;
+        /** Qp status: 0 = not found, 1 = found and not in memory, 2 = found and in memory */
+        int qp_status;
+        /** A pointer to the Qs data either in memory or disk. Null if does not exist. */
+        void *qs;
+        /** Qs status: 0 = not found, 1 = found and not in memory, 2 = found and in memory */
+        int qs_status;
+} mscal_model_t;
+
+
+typedef struct mscal_configuration_dataset_t {
+	/** tracking netcdf id **/
+        int ncid;
+
+	/** Number of x points */
+	int nx;
+	/** Number of y points */
+	int ny;
+	/** Number of z points */
+	int nz;
+
+	/** dataset **/
+	char *label;
+        char *file;
+        mscal_model_t *model;
+
+	/** list of latitudes **/
+	float *latitudes;
+	/** list of longitudes **/
+	float *longitudes;
+	/** list of depths **/
+	float *depths;
+
+} mscal_configuration_dataset_t;
+
 typedef struct mscal_configuration_t {
 	/** The zone of UTM projection */
 	int utm_zone;
@@ -64,46 +114,12 @@ typedef struct mscal_configuration_t {
 	char model_dir[128];
         /** GTL on or off (1 or 0) */
         int gtl;
-	/** Number of x points */
-	int nx;
-	/** Number of y points */
-	int ny;
-	/** Number of z points */
-	int nz;
-	/** Depth in meters */
-	double depth;
-	/** list of latitudes **/
-	float *latitudes;
-	/** list of longitudes **/
-	float *longitudes;
-	/** list of depths **/
-	float *depths;
+
+/* per dataset -- max is 10*/
+        int dataset_cnt;
+        mscal_configuration_data_t *datasets;
+
 } mscal_configuration_t;
-
-
-/** The model structure which points to available portions of the model. */
-typedef struct mscal_model_t {
-	/** A pointer to the Vs data either in memory or disk. Null if does not exist. */
-	void *vs;
-	/** Vs status: 0 = not found, 1 = found and not in memory, 2 = found and in memory */
-	int vs_status;
-	/** A pointer to the Vp data either in memory or disk. Null if does not exist. */
-	void *vp;
-	/** Vp status: 0 = not found, 1 = found and not in memory, 2 = found and in memory */
-	int vp_status;
-	/** A pointer to the rho data either in memory or disk. Null if does not exist. */
-	void *rho;
-	/** Rho status: 0 = not found, 1 = found and not in memory, 2 = found and in memory */
-	int rho_status;
-	/** A pointer to the Qp data either in memory or disk. Null if does not exist. */
-	void *qp;
-	/** Qp status: 0 = not found, 1 = found and not in memory, 2 = found and in memory */
-	int qp_status;
-	/** A pointer to the Qs data either in memory or disk. Null if does not exist. */
-	void *qs;
-	/** Qs status: 0 = not found, 1 = found and not in memory, 2 = found and in memory */
-	int qs_status;
-} mscal_model_t;
 
 // Constants
 /** The version of the model. */
