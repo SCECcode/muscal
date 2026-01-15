@@ -7,6 +7,7 @@
  *
  */
 
+#include <limits.h>
 #include "ucvm_model_dtypes.h"
 #include "mscal.h"
 
@@ -58,6 +59,7 @@ int mscal_init(const char *dir, const char *label) {
 
     // Read the mscal_configuration file.
     if (mscal_read_configuration(configbuf, mscal_configuration) != SUCCESS)
+XXX
         return FAIL;
 
     // Set up the data directory.
@@ -65,6 +67,7 @@ int mscal_init(const char *dir, const char *label) {
 
     // Can we allocate the model, or parts of it, to memory. If so, we do.
     tempVal = mscal_try_reading_model(mscal_velocity_model);
+XXX
 
     if (tempVal == SUCCESS) {
 //        fprintf(stderr, "WARNING: Could not load model into memory. Reading the model from the\n");
@@ -72,42 +75,6 @@ int mscal_init(const char *dir, const char *label) {
     } else if (tempVal == FAIL) {
         mscal_print_error("No model file was found to read from.");
         return FAIL;
-    }
-
-    // We need to convert the point from lat, lon to UTM, let's set it up.
-    char mscal_projstr[64];
-    snprintf(mscal_projstr, 64, "+proj=utm +ellps=clrk66 +zone=%d +datum=NAD27 +units=m +no_defs", mscal_configuration->utm_zone);
-    if (!(mscal_geo2utm = proj_create_crs_to_crs(PJ_DEFAULT_CTX, "EPSG:4326", mscal_projstr, NULL))) {
-        mscal_print_error("Could not set up Proj transformation from EPSG:4326 to UTM.");
-        mscal_print_error((char  *)proj_context_errno_string(PJ_DEFAULT_CTX, proj_context_errno(PJ_DEFAULT_CTX)));
-        return (UCVM_CODE_ERROR);
-    }
-
-
-    // In order to simplify our calculations in the query, we want to rotate the box so that the bottom-left
-    // corner is at (0m,0m). Our box's height is total_height_m and total_width_m. We then rotate the
-    // point so that is is somewhere between (0,0) and (total_width_m, total_height_m). How far along
-    // the X and Y axis determines which grid points we use for the interpolation routine.
-
-    // Calculate the rotation angle of the box.
-    north_height_m = mscal_configuration->top_left_corner_n - mscal_configuration->bottom_left_corner_n;
-    east_width_m = mscal_configuration->top_left_corner_e - mscal_configuration->bottom_left_corner_e;
-
-    // Rotation angle. Cos, sin, and tan are expensive computationally, so calculate once.
-    rotation_angle = atan(east_width_m / north_height_m);
-
-    mscal_cos_rotation_angle = cos(rotation_angle);
-    mscal_sin_rotation_angle = sin(rotation_angle);
-
-    mscal_total_height_m = sqrt(pow(mscal_configuration->top_left_corner_n - mscal_configuration->bottom_left_corner_n, 2.0f) +
-          pow(mscal_configuration->top_left_corner_e - mscal_configuration->bottom_left_corner_e, 2.0f));
-    mscal_total_width_m  = sqrt(pow(mscal_configuration->top_right_corner_n - mscal_configuration->top_left_corner_n, 2.0f) +
-          pow(mscal_configuration->top_right_corner_e - mscal_configuration->top_left_corner_e, 2.0f));
-
-    if(mscal_debug) {
-      fprintf(stderr,"north_height %lf east_width %lf\n", north_height_m, east_width_m);
-      fprintf(stderr,"totol height %lf total width %lf\n", mscal_total_height_m, mscal_total_width_m);
-      fprintf(stderr,"cos angle %lf sin angle %lf\n", mscal_cos_rotation_angle, mscal_sin_rotation_angle);
     }
 
     // setup config_string 
@@ -121,94 +88,6 @@ int mscal_init(const char *dir, const char *label) {
     return SUCCESS;
 }
 
-/*
-#define PROJ_GEO_IPJ "+proj=latlong +datum=WGS84"
-#define PROJ_GEO_OPJ "+proj=utm +zone=11 +ellps=WGS84"
-static int to_utm(double *lon, double *lat) {
-    projPJ ipj= pj_init_plus(PROJ_GEO_IPJ);
-    projPJ opj = pj_init_plus(PROJ_GEO_OPJ);
-    int p = pj_transform(ipj, opj, 1, 1, lon, lat, NULL );
-    return p;
-}
-*/
-
-/*** transform to UTM zone 32, then back to geographical 
-         https://proj.org/en/9.3/development/quickstart.html
-14    P = proj_create_crs_to_crs(
-15        C, "EPSG:4326", "+proj=utm +zone=32 +datum=WGS84", 
-16        NULL);
-
-41    b = proj_trans(P, PJ_FWD, a);
-42    printf("easting: %.3f, northing: %.3f\n", b.enu.e, b.enu.n);
-43
-44    b = proj_trans(P, PJ_INV, b);
-45    printf("longitude: %g, latitude: %g\n", b.lp.lam, b.lp.phi);
-
-and
-    PJ_COORD c_in;
-33    c_in.lpzt.z = 0.0;
-34    c_in.lpzt.t = HUGE_VAL; // important only for time-dependent projections
-35    c_in.lp.lam = lon;
-36    c_in.lp.phi = lat;
-37
-
-and
-
-typedef union {
-    double v[4];
-    PJ_XYZT xyzt;
-    PJ_UVWT uvwt;
-    PJ_LPZT lpzt;
-    PJ_GEOD geod;
-    PJ_OPK opk;
-    PJ_ENU enu;
-    PJ_XYZ  xyz;
-    PJ_UVW  uvw;
-    PJ_LPZ  lpz;
-    PJ_XY   xy;
-    PJ_UV   uv;
-    PJ_LP   lp;
-} PJ_COORD ;
-
-examples:
-https://proj.org/en/5.0/development/migration.html
-
-*/
-
-static int to_utm(double lon, double lat, double *point_u, double *point_v) {
-    PJ_COORD xyzSrc = proj_coord(lat, lon, 0.0, HUGE_VAL);
-    PJ_COORD xyzDest = proj_trans(mscal_geo2utm, PJ_FWD, xyzSrc);
-    int err = proj_context_errno(PJ_DEFAULT_CTX);
-    if (err) {
-       fprintf(stderr, "Error occurred while transforming latitude=%.4f, longitude=%.4f to UTM.\n",
-              lat, lon);
-        fprintf(stderr, "Proj error: %s\n", proj_context_errno_string(PJ_DEFAULT_CTX, err));
-        return UCVM_CODE_ERROR;
-    }
-    *point_u = xyzDest.xyzt.x;
-    *point_v = xyzDest.xyzt.y;
-    return err;
-}
-
-static int to_geo(double point_u, double point_v, double *lon, double *lat) {
-    PJ_COORD xyzSrc;
-    xyzSrc.xyzt.x=point_u;
-    xyzSrc.xyzt.y=point_v;
-    PJ_COORD xyzDest = proj_trans(mscal_geo2utm, PJ_INV, xyzSrc);
-    
-    int err = proj_context_errno(PJ_DEFAULT_CTX);
-    if (err) {
-       fprintf(stderr, "Error occurred while transforming u=%.4f, v=%.4f to Geo.\n",
-              point_u, point_v);
-        fprintf(stderr, "Proj error: %s\n", proj_context_errno_string(PJ_DEFAULT_CTX, err));
-        return UCVM_CODE_ERROR;
-    }
-    *lon=xyzDest.lp.lam;
-    *lat=xyzDest.lp.phi;
-    return err;
-}
-
-
 /**
  * Queries mscal at the given points and returns the data that it finds.
  *
@@ -220,270 +99,20 @@ static int to_geo(double point_u, double point_v, double *lon, double *lat) {
 int mscal_query(mscal_point_t *points, mscal_properties_t *data, int numpoints) {
     int i = 0;
 
-    double point_u = 0, point_v = 0;
-    double point_x = 0, point_y = 0; 
-				   
-    int load_x_coord = 0, load_y_coord = 0, load_z_coord = 0;
-    double x_percent = 0, y_percent = 0, z_percent = 0;
-
-    mscal_properties_t surrounding_points[8];
-    int zone = mscal_configuration->utm_zone;
-
-    for (i = 0; i < numpoints; i++) {
-
-        // We need to be below the surface to service this query.
-        if (points[i].depth < 0) {
-            data[i].vp = -1;
-            data[i].vs = -1;
-            data[i].rho = -1;
-            data[i].qp = -1;
-            data[i].qs = -1;
-            continue;
-        }
-
-	// lon,lat,u,v			     
-	to_utm(points[i].longitude, points[i].latitude, &point_u, &point_v);
-
-if(mscal_debug) { fprintf(stderr,"lon %lf lat %lf\n", points[i].longitude, points[i].latitude); }
-if(mscal_debug) { fprintf(stderr,"point_u %lf point_v %lf\n", point_u, point_v); }
-
-        // Point within rectangle.
-        point_u -= mscal_configuration->bottom_left_corner_e;
-        point_v -= mscal_configuration->bottom_left_corner_n;
-
-        // We need to rotate that point, the number of degrees we calculated above.
-        point_x = mscal_cos_rotation_angle * point_u - mscal_sin_rotation_angle * point_v;
-        point_y = mscal_sin_rotation_angle * point_u + mscal_cos_rotation_angle * point_v;
-
-        // Which point base point does that correspond to?
-        load_x_coord = floor(point_x / mscal_total_width_m * (mscal_configuration->nx - 1));
-
-/* make origin-y at lower left instead of upper left (flipped) */
-        load_y_coord = floor(point_y / mscal_total_height_m * (mscal_configuration->ny - 1));
-if(mscal_debug) { fprintf(stderr,"  before load_y_coord %d\n", load_y_coord); }
-        load_y_coord = (mscal_configuration->ny - load_y_coord) - 1;
-if(mscal_debug) { fprintf(stderr,"  after load_y_coord (%d)%d\n", mscal_configuration->ny,load_y_coord); }
-
-        // And on the Z-axis?
-        load_z_coord = (mscal_configuration->depth / mscal_configuration->depth_interval - 1) -
-                       floor(points[i].depth / mscal_configuration->depth_interval);
-
-if(mscal_debug) { fprintf(stderr,"load_x_coord %d load_y_coord %d load_z_coord %d\n", load_x_coord,load_y_coord,load_z_coord); }
-
-        // Are we outside the model's X and Y boundaries?
-        if (load_x_coord > mscal_configuration->nx - 2 || load_y_coord > mscal_configuration->ny - 2 || load_x_coord < 0 || load_y_coord < 0) {
-            data[i].vp = -1;
-            data[i].vs = -1;
-            data[i].rho = -1;
-            data[i].qp = -1;
-            data[i].qs = -1;
-            continue;
-        }
-
-        if(mscal_configuration->interpolation) {
-
-          // Get the X, Y, and Z percentages for the bilinear or trilinear interpolation below.
-          double x_interval=(mscal_configuration->nx > 1) ?
-                     mscal_total_width_m / (mscal_configuration->nx-1):mscal_total_width_m;
-          double y_interval=(mscal_configuration->ny > 1) ?
-                     mscal_total_height_m / (mscal_configuration->ny-1):mscal_total_height_m;
-
-          x_percent = fmod(point_u, x_interval) / x_interval;
-          y_percent = fmod(point_v, y_interval) / y_interval;
-          z_percent = fmod(points[i].depth, mscal_configuration->depth_interval) / mscal_configuration->depth_interval;
-
-          if (load_z_coord < 1) {
-              // We're below the model boundaries. Bilinearly interpolate the bottom plane and use that value.
-              data[i].vp = -1;
-              data[i].vs = -1;
-              data[i].rho = -1;
-              data[i].qp = -1;
-              data[i].qs = -1;
-              continue;
-          } else {
-              // Read all the surrounding point properties.
-              mscal_read_properties(load_x_coord, load_y_coord, load_z_coord, &(surrounding_points[0]));    // Orgin.
-              mscal_read_properties(load_x_coord + 1, load_y_coord, load_z_coord, &(surrounding_points[1]));    // Orgin + 1x
-              mscal_read_properties(load_x_coord, load_y_coord + 1, load_z_coord, &(surrounding_points[2]));    // Orgin + 1y
-              mscal_read_properties(load_x_coord + 1, load_y_coord + 1, load_z_coord, &(surrounding_points[3]));    // Orgin + x + y, forms top plane.
-              mscal_read_properties(load_x_coord, load_y_coord, load_z_coord - 1, &(surrounding_points[4]));    // Bottom plane origin
-              mscal_read_properties(load_x_coord + 1, load_y_coord, load_z_coord - 1, &(surrounding_points[5]));    // +1x
-              mscal_read_properties(load_x_coord, load_y_coord + 1, load_z_coord - 1, &(surrounding_points[6]));    // +1y
-              mscal_read_properties(load_x_coord + 1, load_y_coord + 1, load_z_coord - 1, &(surrounding_points[7]));    // +x +y, forms bottom plane.
-  
-              mscal_trilinear_interpolation(x_percent, y_percent, z_percent, surrounding_points, &(data[i]));
-          }
-          } else {
-if(mscal_debug) {fprintf(stderr,"direct call, no interpolation\n"); }
-              mscal_read_properties(load_x_coord, load_y_coord, load_z_coord, &(data[i]));    // Orgin.
-        }
-
-        // Calculate Qp and Qs.
-        if (data[i].vs < 1500) 
-            data[i].qs = data[i].vs * 0.02;
-        else
-            data[i].qs = data[i].vs * 0.10;
-
-        data[i].qp = data[i].qs * 1.5;
-    }
+    data[i].vp = -1;
+    data[i].vs = -1;
+    data[i].rho = -1;
+    data[i].qp = -1;
+    data[i].qs = -1;
 
     return SUCCESS;
 }
 
 /**
- * Retrieves the material properties (whatever is available) for the given data point, expressed
- * in x, y, and z co-ordinates.
- *
- * @param x The x coordinate of the data point.
- * @param y The y coordinate of the data point.
- * @param z The z coordinate of the data point.
- * @param data The properties struct to which the material properties will be written.
  */
-void mscal_read_properties(int x, int y, int z, mscal_properties_t *data) {
-    // Set everything to -1 to indicate not found.
-    data->vp = -1;
-    data->vs = -1;
-    data->rho = -1;
-    data->qp = -1;
-    data->qs = -1;
-
-if(mscal_debug) {fprintf(stderr,"read_properties index: x(%d) y(%d) z(%d)\n",x,y,z); }
-if(mscal_debug) {fprintf(stderr,"     nx(%d) ny(%d) nz(%d)\n",
-	          mscal_configuration->nx,mscal_configuration->ny,mscal_configuration->nz); }
-    float *ptr = NULL;
-    FILE *fp = NULL;
-    long location = 0;
-
-    // the z is inverted at line #145
-    if ( strcmp(mscal_configuration->seek_axis, "fast-y") == 0 ||
-                 strcmp(mscal_configuration->seek_axis, "fast-Y") == 0 ) { // fast-y,  mscal 
-        if(strcmp(mscal_configuration->seek_direction, "bottom-up") == 0) { 
-                location = ((long) z * mscal_configuration->nx * mscal_configuration->ny) + (x * mscal_configuration->ny) + y;
-if(mscal_debug) {fprintf(stderr,"LOCATION==%d(fast-y, bottom-up)\n", location); }
-            } else { // nz starts from 0 up to nz-1
-                    location = ((long)((mscal_configuration->nz -1) - z) * mscal_configuration->nx * mscal_configuration->ny) + (x * mscal_configuration->ny) + y;
-if(mscal_debug) {fprintf(stderr,"LOCATION==%d(fast-y, not bottom-up)\n", location); }
-        }
-    } else {  // fast-X, cca data
-        if ( strcmp(mscal_configuration->seek_axis, "fast-x") == 0 ||
-                     strcmp(mscal_configuration->seek_axis, "fast-X") == 0 ) { // fast-x,  mscal 
-            if(strcmp(mscal_configuration->seek_direction, "bottom-up") == 0) { 
-                    location = ((long)z * mscal_configuration->nx * mscal_configuration->ny) + (y * mscal_configuration->nx) + x;
-if(mscal_debug) {fprintf(stderr,"LOCATION==%d(fast-x, bottom-up)\n", location); }
-                } else { // bottom-up
-                        location = ((long)(mscal_configuration->nz - z) * mscal_configuration->nx * mscal_configuration->ny) + (y * mscal_configuration->nx) + x;
-if(mscal_debug) {fprintf(stderr,"LOCATION==%d(fast-x, not bottom-up)\n", location); }
-            }
-        }
-    }
-
-    // Check our loaded components of the model.
-    if (mscal_velocity_model->vs_status == 2) {
-        // Read from memory.
-        ptr = (float *)mscal_velocity_model->vs;
-        data->vs = ptr[location];
-    } else if (mscal_velocity_model->vs_status == 1) {
-        // Read from file.
-        fp = (FILE *)mscal_velocity_model->vs;
-        fseek(fp, location * sizeof(float), SEEK_SET);
-        float temp;
-        fread(&(temp), sizeof(float), 1, fp);
-        data->vs = temp;
-if(mscal_debug) {fprintf(stderr,"     FOUND : vs %f\n", temp); }
-    }
-
-    // Check our loaded components of the model.
-    if (mscal_velocity_model->vp_status == 2) {
-        // Read from memory.
-        ptr = (float *)mscal_velocity_model->vp;
-        data->vp = ptr[location];
-    } else if (mscal_velocity_model->vp_status == 1) {
-        // Read from file.
-        fp = (FILE *)mscal_velocity_model->vp;
-        fseek(fp, location * sizeof(float), SEEK_SET);
-        float temp;
-        fread(&(temp), sizeof(float), 1, fp);
-if(mscal_debug) {fprintf(stderr,"     FOUND : vp %f\n", temp); }
-        data->vp=temp;
-    }
-
-    // Check our loaded components of the model.
-    if (mscal_velocity_model->rho_status == 2) {
-        // Read from memory.
-        ptr = (float *)mscal_velocity_model->rho;
-        data->rho = ptr[location];
-    } else if (mscal_velocity_model->rho_status == 1) {
-        // Read from file.
-        fp = (FILE *)mscal_velocity_model->rho;
-        fseek(fp, location * sizeof(float), SEEK_SET);
-        float temp;
-        fread(&(temp), sizeof(float), 1, fp);
-if(mscal_debug) {fprintf(stderr,"     FOUND : density %f\n", temp); }
-        data->rho=temp;
-    }
-}
-
-/**
- * Trilinearly interpolates given a x percentage, y percentage, z percentage and a cube of
- * data properties in top origin format (top plane first, bottom plane second).
- *
- * @param x_percent X percentage
- * @param y_percent Y percentage
- * @param z_percent Z percentage
- * @param eight_points Eight surrounding data properties
- * @param ret_properties Returned data properties
- */
-void mscal_trilinear_interpolation(double x_percent, double y_percent, double z_percent,
-                             mscal_properties_t *eight_points, mscal_properties_t *ret_properties) {
-    mscal_properties_t *temp_array = calloc(2, sizeof(mscal_properties_t));
-    mscal_properties_t *four_points = eight_points;
-
-    mscal_bilinear_interpolation(x_percent, y_percent, four_points, &temp_array[0]);
-
-    // Now advance the pointer four "cvms5_properties_t" spaces.
-    four_points += 4;
-
-    // Another interpolation.
-    mscal_bilinear_interpolation(x_percent, y_percent, four_points, &temp_array[1]);
-
-    // Now linearly interpolate between the two.
-    mscal_linear_interpolation(z_percent, &temp_array[0], &temp_array[1], ret_properties);
-
-    free(temp_array);
-}
-
-/**
- * Bilinearly interpolates given a x percentage, y percentage, and a plane of data properties in
- * origin, bottom-right, top-left, top-right format.
- *
- * @param x_percent X percentage.
- * @param y_percent Y percentage.
- * @param four_points Data property plane.
- * @param ret_properties Returned data properties.
- */
-void mscal_bilinear_interpolation(double x_percent, double y_percent, mscal_properties_t *four_points, mscal_properties_t *ret_properties) {
-    mscal_properties_t *temp_array = calloc(2, sizeof(mscal_properties_t));
-    mscal_linear_interpolation(x_percent, &four_points[0], &four_points[1], &temp_array[0]);
-    mscal_linear_interpolation(x_percent, &four_points[2], &four_points[3], &temp_array[1]);
-    mscal_linear_interpolation(y_percent, &temp_array[0], &temp_array[1], ret_properties);
-    free(temp_array);
-}
-
-/**
- * Linearly interpolates given a percentage from x0 to x1, a data point at x0, and a data point at x1.
- *
- * @param percent Percent of the way from x0 to x1 (from 0 to 1 interval).
- * @param x0 Data point at x0.
- * @param x1 Data point at x1.
- * @param ret_properties Resulting data properties.
- */
-void mscal_linear_interpolation(double percent, mscal_properties_t *x0, mscal_properties_t *x1, mscal_properties_t *ret_properties) {
-    ret_properties->vp  = (1 - percent) * x0->vp  + percent * x1->vp;
-    ret_properties->vs  = (1 - percent) * x0->vs  + percent * x1->vs;
-    ret_properties->rho = (1 - percent) * x0->rho + percent * x1->rho;
-    ret_properties->qp  = (1 - percent) * x0->qp  + percent * x1->qp;
-    ret_properties->qs  = (1 - percent) * x0->qs  + percent * x1->qs;
-}
+void mscal_setdebug() {
+   mscal_debug=1;
+}               
 
 /**
  * Called when the model is being discarded. Free all variables.
@@ -575,9 +204,11 @@ int mscal_read_configuration(char *file, mscal_configuration_t *config) {
             }
 	    /* for each data_file, allocate a mscal configurtion dataset's block and fill in */ 
             if (strcmp(key, "data_file") == 0) { 
-		int rc=_mscal_nc_configuration(value);
-	        if(rc == 1 ) {
-	            config->dataset_cnt++;
+                if( config->dataset_cnt == MSCAL_DATASET_MAX) {
+                    mscal_print_error("Exceeded dataset maximum limit.");
+                    } else {
+		        int rc=_mscal_nc_dataset_init(config->dataset_cnt, value);
+	                if(rc == 1 ) { config->dataset_cnt++; }
                 }
             }
         }
@@ -596,11 +227,28 @@ int mscal_read_configuration(char *file, mscal_configuration_t *config) {
 
 /**
  * Extract mscal netcdf dataest specific info
+ * and fill in the model info, one dataset at a time
+ * and allocate required memory space
  *
  * @param 
  */
-int _mscal_nc_configuration(char *blob) {
-XXX
+int _mscal_nc_dataset_init(int idx, char *blob) {
+	XXX
+   /* parse the blob and grab the meta data */
+   /* grab the related netcdf file and extract dataset info */
+   /* load the vp/vs/rho in memory  
+         TODO: figure what happen if too big */
+   return SUCCESS;
+}
+
+/**
+ * Called to clear out the allocated memory 
+ *
+ * @param 
+ */
+int _mscal_nc_dataset_finalize(int idx) {
+	XXX
+   return SUCCESS;
 }
 
 /**

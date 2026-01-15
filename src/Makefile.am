@@ -3,11 +3,11 @@
 objects = um_netcdf.o
 
 # General compiler/linker flags
-AM_CFLAGS = ${CFLAGS} 
-AM_LDFLAGS = ${LDFLAGS} -lm
+AM_CFLAGS = ${CFLAGS} -I$(prefix)/include
+AM_LDFLAGS = ${LDFLAGS} -L$(prefix)/lib -lm
 
 
-TARGETS = libmscal.a libmscal.so
+TARGETS = mscal_query libmscal.a libmscal.so
 
 all: $(TARGETS)
 
@@ -18,6 +18,7 @@ install:
 	cp libmscal.so ${prefix}/lib
 	cp libmscal.a ${prefix}/lib
 	cp mscal.h ${prefix}/include
+	cp mscal_query ${prefix}/bin
 
 clean:
 	rm -rf $(TARGETS)
@@ -41,5 +42,10 @@ mscal_static.o: mscal.c
 $(objects): %.o: %.c
 	$(CC) -o $@ -c $^ $(AM_CFLAGS)
 
+mscal_query.o: mscal_query.c
+	$(CC) $(AM_CFLAGS) -o $@ -c $^
+
+mscal_query : mscal_query.o libmscal.a
+	$(CC) -o $@ $^ $(AM_LDFLAGS)
 
 

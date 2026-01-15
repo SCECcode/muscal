@@ -21,6 +21,7 @@
 
 /* config string */
 #define MSCAL_CONFIG_MAX 1000
+#define MSCAL_DATASET_MAX 10
 
 // Structures
 /** Defines a point (latitude, longitude, and depth) in WGS84 format */
@@ -82,7 +83,7 @@ typedef struct mscal_model_t {
 } mscal_model_t;
 
 
-typedef struct mscal_configuration_dataset_t {
+typedef struct mscal_dataset_t {
 	/** tracking netcdf id **/
         int ncid;
 
@@ -105,7 +106,7 @@ typedef struct mscal_configuration_dataset_t {
 	/** list of depths **/
 	float *depths;
 
-} mscal_configuration_dataset_t;
+} mscal_dataset_t;
 
 typedef struct mscal_configuration_t {
 	/** The zone of UTM projection */
@@ -117,7 +118,7 @@ typedef struct mscal_configuration_t {
 
 /* per dataset -- max is 10*/
         int dataset_cnt;
-        mscal_configuration_data_t *datasets;
+        mscal_dataset_t datasets[MSCAL_DATASET_MAX];
 
 } mscal_configuration_t;
 
@@ -175,3 +176,5 @@ void mscal_print_error(char *err);
 void mscal_read_properties(int x, int y, int z, mscal_properties_t *data);
 /** Attempts to malloc the model size in memory and read it in. */
 int mscal_try_reading_model(mscal_model_t *model);
+/** toggle debug flag **/
+void mscal_setdebug();
