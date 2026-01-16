@@ -92,7 +92,7 @@ int main(int argc, char* const argv[]) {
         while (fgets(line, 1000, stdin) != NULL) {
 
            if(mscal_debug) {
-             fprintf(stderr,"LINE: (%s)",line);
+             fprintf(stderr,"LINE: %s\n",line);
            }
 
            if(line[0]=='#') continue; // comment line
@@ -100,7 +100,7 @@ int main(int argc, char* const argv[]) {
                    &pt.longitude,&pt.latitude,&pt.depth) == 3) {
 
               if(mscal_debug) {
-                  fprintf(stderr, "  calling : with %f,%f using > depth(%f)\n",
+                  fprintf(stderr, "calling : with %f,%f using > depth(%f)\n",
                          pt.longitude,pt.latitude,pt.depth);
               }
 

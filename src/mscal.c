@@ -10,8 +10,10 @@
 #include <limits.h>
 #include "ucvm_model_dtypes.h"
 #include "mscal.h"
+#include "um_netcdf.h"
+#include "cJSON.h"
 
-int mscal_debug=0;
+int mscal_ucvm_debug=0;
 
 /** The config of the model */
 char *mscal_config_string=NULL;
@@ -57,17 +59,25 @@ int mscal_init(const char *dir, const char *label) {
     // Configuration file location.
     sprintf(configbuf, "%s/model/%s/data/config", dir, label);
 
-    // Read the mscal_configuration file.
-    if (mscal_read_configuration(configbuf, mscal_configuration) != SUCCESS)
-XXX
-        return FAIL;
-
-    // Set up the data directory.
-    sprintf(mscal_data_directory, "%s/model/%s/data/%s/", dir, label, mscal_configuration->model_dir);
+    // Read the configuration file.
+    if (mscal_read_configuration(configbuf, mscal_configuration) != UCVM_MODEL_CODE_SUCCESS) {
+           // Try another, when is running in standalone mode..
+       sprintf(configbuf, "%s/data/config", dir);
+       if (mscal_read_configuration(configbuf, mscal_configuration) != UCVM_MODEL_CODE_SUCCESS) {
+           mscal_print_error("No configuration file was found to read from.");
+           return UCVM_MODEL_CODE_ERROR;
+           } else {
+           // Set up the data directory.
+               sprintf(mscal_data_directory, "%s/data/%s", dir, mscal_configuration->model_dir);
+       }
+       } else {
+           // Set up the data directory.
+           sprintf(mscal_data_directory, "%s/model/%s/data/%s", dir, label, mscal_configuration->model_dir);
+    }
 
     // Can we allocate the model, or parts of it, to memory. If so, we do.
-    tempVal = mscal_try_reading_model(mscal_velocity_model);
-XXX
+    mscal_velocity_model->dataset_cnt=mscal_configuration->dataset_cnt;
+    tempVal = mscal_read_model(mscal_configuration, mscal_velocity_model, mscal_data_directory);
 
     if (tempVal == SUCCESS) {
 //        fprintf(stderr, "WARNING: Could not load model into memory. Reading the model from the\n");
@@ -80,7 +90,6 @@ XXX
     // setup config_string 
     sprintf(mscal_config_string,"config = %s\n",configbuf);
     mscal_config_sz=1;
-
 
     // Let everyone know that we are initialized and ready for business.
     mscal_is_initialized = 1;
@@ -97,13 +106,54 @@ XXX
  * @return SUCCESS or FAIL.
  */
 int mscal_query(mscal_point_t *points, mscal_properties_t *data, int numpoints) {
-    int i = 0;
+    int data_idx = 0;
+    nc_type vtype=NC_FLOAT;
 
-    data[i].vp = -1;
-    data[i].vs = -1;
-    data[i].rho = -1;
-    data[i].qp = -1;
-    data[i].qs = -1;
+    /* iterate through the dataset to see where does the point fall into */
+    /* for now assume there is only 1 dataset */
+    mscal_dataset_t *dataset=&(mscal_velocity_model->datasets[data_idx]);
+
+    float *lon_list=dataset->longitudes;
+    float *lat_list=dataset->latitudes;
+    float *dep_list=dataset->depths;
+    int nx=dataset->nx;
+    int ny=dataset->ny;
+    int nz=dataset->nz;
+    float *vp_buffer=dataset->vp_buffer;
+    float *vs_buffer=dataset->vs_buffer;
+    float *rho_buffer=dataset->rho_buffer;
+
+    for(int i=0; i<numpoints; i++) {
+        data[i].vp = -1;
+        data[i].vs = -1;
+        data[i].rho = -1;
+        data[i].qp = -1;
+        data[i].qs = -1;
+
+        float lon_f=points[i].longitude;
+        float lat_f=points[i].latitude;
+        float dep_f=points[i].depth;
+
+        int lon_idx=find_buffer_idx((float *)lon_list,nx,lon_f);
+        int lat_idx=find_buffer_idx((float *)lat_list,ny,lat_f);
+        int dep_idx=find_buffer_idx((float *)dep_list,nz,dep_f);
+    
+// offset= (dep_idx)*(lat_cnt * lon_cnt)+(lat_idx)*(lon_cnt)+lon_idx
+        int offset= (dep_idx)*(ny * nx)+(lat_idx)*(nx)+lon_idx;
+
+        if(mscal_ucvm_debug) {
+          fprintf(stderr,"\nTarget offset %d : idx lon/lat/dep = %d/%d/%d\n", offset,lon_idx, lat_idx, dep_idx);
+        }
+
+        float target_vp=((float *)vp_buffer)[offset];
+        float target_vs=((float *)vs_buffer)[offset];
+        float target_rho=((float *)rho_buffer)[offset];
+
+        data[i].vp = target_vp;
+        data[i].vs = target_vs;
+        data[i].rho = target_rho;
+
+    }
 
     return SUCCESS;
 }
@@ -111,7 +161,7 @@ int mscal_query(mscal_point_t *points, mscal_properties_t *data, int numpoints) 
 /**
  */
 void mscal_setdebug() {
-   mscal_debug=1;
+   mscal_ucvm_debug=1;
 }               
 
 /**
@@ -120,13 +170,12 @@ void mscal_setdebug() {
  * @return SUCCESS
  */
 int mscal_finalize() {
-
-    proj_destroy(mscal_geo2utm);
-    mscal_geo2utm = NULL;
-
-    if (mscal_velocity_model) free(mscal_velocity_model);
-    if (mscal_configuration) free(mscal_configuration);
-
+    if (mscal_configuration) {
+        mscal_configuration_finalize(mscal_configuration);
+    }
+    if (mscal_velocity_model) {
+        mscal_velocity_model_finalize(mscal_velocity_model);
+    }
     return SUCCESS;
 }
 
@@ -175,25 +224,23 @@ int mscal_config(char **config, int *sz)
  *
  * @param file The mscal_configuration file location on disk to read.
  * @param config The mscal_configuration struct to which the data should be written.
- * @return Success or failure, depending on if file was read successfully.
+ * @return Number of dataset expected in the model
  */
 int mscal_read_configuration(char *file, mscal_configuration_t *config) {
     FILE *fp = fopen(file, "r");
     char key[40];
     char value[100];
     char line_holder[128];
+    config->dataset_cnt=0;
 
     // If our file pointer is null, an error has occurred. Return fail.
-    if (fp == NULL) {
-        mscal_print_error("Could not open the mscal_configuration file.");
-        return FAIL;
-    }
+    if (fp == NULL) { return UCVM_MODEL_CODE_ERROR; }
 
-    config->dataset_cnt = 0 ; 
     // Read the lines in the mscal_configuration file.
     while (fgets(line_holder, sizeof(line_holder), fp) != NULL) {
         if (line_holder[0] != '#' && line_holder[0] != ' ' && line_holder[0] != '\n') {
-            sscanf(line_holder, "%s = %s", key, value);
+
+	    _splitline(line_holder, key, value);
 
             // Which variable are we editing?
             if (strcmp(key, "utm_zone") == 0) config->utm_zone = atoi(value);
@@ -202,13 +249,13 @@ int mscal_read_configuration(char *file, mscal_configuration_t *config) {
                 config->interpolation=0;
                 if (strcmp(value,"on") == 0) config->interpolation=1;
             }
-	    /* for each data_file, allocate a mscal configurtion dataset's block and fill in */ 
+	    /* for each dataset, allocate a model dataset's block and fill in */ 
             if (strcmp(key, "data_file") == 0) { 
-                if( config->dataset_cnt == MSCAL_DATASET_MAX) {
-                    mscal_print_error("Exceeded dataset maximum limit.");
+                if( config->dataset_cnt < MSCAL_DATASET_MAX) {
+		    int rc=_setup_a_dataset(config,value);
+	            if(rc == 1 ) { config->dataset_cnt++; }
                     } else {
-		        int rc=_mscal_nc_dataset_init(config->dataset_cnt, value);
-	                if(rc == 1 ) { config->dataset_cnt++; }
+                        mscal_print_error("Exceeded dataset maximum limit.");
                 }
             }
         }
@@ -217,28 +264,135 @@ int mscal_read_configuration(char *file, mscal_configuration_t *config) {
     // Have we set up all mscal_configuration parameters?
     if (config->utm_zone == 0 || config->model_dir[0] == '\0' || config->dataset_cnt == 0 ) {
         mscal_print_error("One mscal_configuration parameter not specified. Please check your mscal_configuration file.");
-        return FAIL;
+        return UCVM_MODEL_CODE_ERROR;
     }
 
     fclose(fp);
-
-    return SUCCESS;
+    return UCVM_MODEL_CODE_SUCCESS;
 }
 
 /**
- * Extract mscal netcdf dataest specific info
+ * Extract mscal netcdf dataset specific info
  * and fill in the model info, one dataset at a time
  * and allocate required memory space
  *
  * @param 
  */
-int _mscal_nc_dataset_init(int idx, char *blob) {
-	XXX
-   /* parse the blob and grab the meta data */
-   /* grab the related netcdf file and extract dataset info */
-   /* load the vp/vs/rho in memory  
-         TODO: figure what happen if too big */
-   return SUCCESS;
+int _setup_a_dataset(mscal_configuration_t *config, char *blobstr) {
+    /* parse the blob and grab the meta data */
+    cJSON *confjson=cJSON_Parse(blobstr);
+    int idx=config->dataset_cnt;
+
+    /* grab the related netcdf file and extract dataset info */
+    if(confjson == NULL) {
+        const char *eptr = cJSON_GetErrorPtr();
+        if(eptr != NULL) {
+            if(mscal_ucvm_debug){ fprintf(stderr, "Configuration dataset setup error: (%s)\n", eptr); }
+            return FAIL;
+        }
+    }
+
+    cJSON *label = cJSON_GetObjectItemCaseSensitive(confjson, "LABEL");
+    if(cJSON_IsString(label)){
+        config->dataset_labels[idx]=strdup(label->valuestring);
+    }
+    cJSON *file = cJSON_GetObjectItemCaseSensitive(confjson, "FILE");
+    if(cJSON_IsString(file)){
+        config->dataset_files[idx]=strdup(file->valuestring);
+    }
+
+    return 1;
+}
+
+void _trimLast(char *str, char m) {
+  int i;
+  i = strlen(str);
+  while (str[i-1] == m) {
+    str[i-1] = '\0';
+    i = i - 1;
+  }
+  return;
+}
+
+void _splitline(char* lptr, char key[], char value[]) {
+
+  char *kptr, *vptr;
+
+  for(int i=0; i<strlen(key); i++) { key[i]='\0'; }
+
+  _trimLast(lptr,'\n');
+  vptr = strchr(lptr, '=');
+  int pos=vptr - lptr;
+
+// skip space in key token from the back
+  while ( lptr[pos-1]  == ' ') {
+    pos--;
+  }
+
+  strncpy(key,lptr, pos);
+  key[pos] = '\0';
+
+  vptr++;
+  while( vptr[0] == ' ' ) {
+    vptr++;
+  }
+  strcpy(value,vptr);
+  _trimLast(value,' ');
+}
+
+
+/*
+ * setup the dataset's content 
+ * and fill in the model info, one dataset at a time
+ * and allocate required memory space
+ *
+ * */
+int mscal_read_model(mscal_configuration_t *config, mscal_model_t *model, char *datadir) {
+
+    int max_idx=model->dataset_cnt; // how many datasets are there
+    size_t nelems= 0;
+    nc_type vtype;
+
+
+    char filepath[256];
+    for(int i=0; i<max_idx;i++) { 
+        mscal_dataset_t *data= &(model->datasets[i]);
+        /* find the netcdf data file, no need to save it */
+        sprintf(filepath, "%s/%s", datadir, config->dataset_files[i]);
+	if(mscal_ucvm_debug) fprintf(stderr," data file ..%s\n", filepath);
+
+        /* setup ncid */
+        data->ncid=open_nc(filepath);
+  
+        /* setup nx/ny/nz and void ptrs */
+        data->longitudes=(float *) get_nc_buffer(data->ncid, "longitude", filepath, &vtype, &nelems, 1);
+        data->nx=nelems;
+        if(vtype != NC_FLOAT) { fprintf(stderr,"BADDD.. vtype panic"); }
+
+        data->latitudes=(float *) get_nc_buffer(data->ncid, "latitude", filepath, &vtype, &nelems, 1);
+        data->ny=nelems;
+        if(vtype != NC_FLOAT) { fprintf(stderr,"BADDD.. vtype panic"); }
+
+        data->depths=(float *) get_nc_buffer(data->ncid, "depth", filepath, &vtype, &nelems, 1);
+        data->nz=nelems;
+        if(vtype != NC_FLOAT) { fprintf(stderr,"BADDD.. vtype panic"); }
+
+        /* load the vp/vs/rho in memory  TODO: figure what happen if too big */
+	    /* Get variable ID by name */
+        data->vp_buffer=get_nc_buffer(data->ncid, "vp", filepath, &vtype, &nelems, 3);
+        if(vtype != NC_FLOAT) { fprintf(stderr,"BADDD.. vtype panic"); }
+	data->elems=nelems;
+
+        data->vs_buffer=get_nc_buffer(data->ncid, "vs", filepath, &vtype, &nelems, 3);
+        if(vtype != NC_FLOAT) { fprintf(stderr,"BADDD.. vtype panic"); }
+        if(data->elems != nelems) { fprintf(stderr,"BADDD.. nelems panic"); }
+
+        data->rho_buffer=get_nc_buffer(data->ncid, "rho", filepath, &vtype, &nelems, 3);
+        if(vtype != NC_FLOAT) { fprintf(stderr,"BADDD.. vtype panic"); }
+        if(data->elems != nelems) { fprintf(stderr,"BADDD.. nelems panic"); }
+
+    }
+    return SUCCESS;
 }
 
 /**
@@ -246,9 +400,35 @@ int _mscal_nc_dataset_init(int idx, char *blob) {
  *
  * @param 
  */
-int _mscal_nc_dataset_finalize(int idx) {
-	XXX
-   return SUCCESS;
+int mscal_configuration_finalize(mscal_configuration_t *config) {
+    int max_idx=config->dataset_cnt; // how many datasets are there
+    for(int i=0; i<max_idx;i++) { 
+	free(config->dataset_labels[i]);  
+	free(config->dataset_files[i]);  
+    }
+    free(config);
+    return SUCCESS;
+}
+
+/**
+ * Called to clear out the allocated memory 
+ *
+ * @param 
+ */
+int mscal_velocity_model_finalize(mscal_model_t *model) {
+    int max_idx=model->dataset_cnt; // how many datasets are there
+    for(int i=0; i<max_idx; i++) {
+        mscal_dataset_t *data= &(model->datasets[i]);
+        free(data->depths);
+        free(data->latitudes);
+        free(data->longitudes);
+	free(data->vp_buffer);
+	free(data->vs_buffer);
+	free(data->rho_buffer);
+	nc_close(data->ncid);
+    }
+    free(model);
+    return SUCCESS;
 }
 
 /**
@@ -257,157 +437,25 @@ int _mscal_nc_dataset_finalize(int idx) {
  * @param err The error string to print out to stderr.
  */
 void mscal_print_error(char *err) {
-    fprintf(stderr, "An error has occurred while executing mscal. The error was: %s\n",err);
-    fprintf(stderr, "\n\nPlease contact software@scec.org and describe both the error and a bit\n");
+    fprintf(stderr, "An error has occurred while executing mscal. The error was: \n\n%s\n",err);
+    fprintf(stderr, "\nPlease contact software@scec.org and describe both the error and a bit\n");
     fprintf(stderr, "about the computer you are running mscal on (Linux, Mac, etc.).\n");
 }
 
-/**
+/*
  * Check if the data is too big to be loaded internally (exceed maximum
  * allowable by a INT variable)
  *
  */
-static int too_big() {
-        long max_size= (long) (mscal_configuration->nx) * mscal_configuration->ny * mscal_configuration->nz;
-        long delta= max_size - INT_MAX;
+static int too_big(mscal_dataset_t *dataset) {
+    long max_size= (long) (dataset->nx) * dataset->ny * dataset->nz;
+    long delta= max_size - INT_MAX;
 
     if( delta > 0) {
         return 1;
         } else {
-        return 0;
+            return 0;
         }
-}
-
-/**
- * Tries to read the model into memory.
- *
- * @param model The model parameter struct which will hold the pointers to the data either on disk or in memory.
- * @return 2 if all files are read to memory, SUCCESS if file is found but at least 1
- * is not in memory, FAIL if no file found.
- */
-int mscal_try_reading_model(mscal_model_t *model) {
-    double base_malloc = mscal_configuration->nx * mscal_configuration->ny * mscal_configuration->nz * sizeof(float);
-    int file_count = 0;
-    int all_read_to_memory =0;
-    char current_file[128];
-    FILE *fp;
-
-    // Let's see what data we actually have.
-    sprintf(current_file, "%s/vp.dat", mscal_data_directory);
-    if (access(current_file, R_OK) == 0) {
-                if( !too_big() ) { // only if fit
-            model->vp = malloc(base_malloc);
-            if (model->vp != NULL) {
-            // Read the model in.
-            fp = fopen(current_file, "rb");
-            fread(model->vp, 1, base_malloc, fp);
-                        all_read_to_memory++;
-            fclose(fp);
-            model->vp_status = 2;
-            } else {
-            model->vp = fopen(current_file, "rb");
-            model->vp_status = 1;
-                    }
-        } else {
-            model->vp = fopen(current_file, "rb");
-            model->vp_status = 1;
-                }
-        file_count++;
-    }
-
-    sprintf(current_file, "%s/vs.dat", mscal_data_directory);
-    if (access(current_file, R_OK) == 0) {
-                if( !too_big( )) { // only if fit
-            model->vs = malloc(base_malloc);
-            if (model->vs != NULL) {
-            // Read the model in.
-            fp = fopen(current_file, "rb");
-            fread(model->vs, 1, base_malloc, fp);
-                        all_read_to_memory++;
-            fclose(fp);
-            model->vs_status = 2;
-            } else {
-            model->vs = fopen(current_file, "rb");
-            model->vs_status = 1;
-            }
-        } else {
-            model->vs = fopen(current_file, "rb");
-            model->vs_status = 1;
-                }
-        file_count++;
-    }
-
-    sprintf(current_file, "%s/density.dat", mscal_data_directory);
-    if (access(current_file, R_OK) == 0) {
-                if(!too_big() ) { // only if fit
-            model->rho = malloc(base_malloc);
-            if (model->rho != NULL) {
-            // Read the model in.
-            fp = fopen(current_file, "rb");
-            fread(model->rho, 1, base_malloc, fp);
-                        all_read_to_memory++;
-            fclose(fp);
-            model->rho_status = 2;
-            } else {
-            model->rho = fopen(current_file, "rb");
-            model->rho_status = 1;
-            }
-        } else {
-            model->rho = fopen(current_file, "rb");
-            model->rho_status = 1;
-        }
-        file_count++;
-    }
-
-    sprintf(current_file, "%s/qp.dat", mscal_data_directory);
-    if (access(current_file, R_OK) == 0) {
-                if( !too_big() ) { // only if fit
-            model->qp = malloc(base_malloc);
-            if (model->qp != NULL) {
-            // Read the model in.
-            fp = fopen(current_file, "rb");
-            fread(model->qp, 1, base_malloc, fp);
-                        all_read_to_memory++;
-            fclose(fp);
-            model->qp_status = 2;
-            } else {
-            model->qp = fopen(current_file, "rb");
-            model->qp_status = 1;
-            }
-        } else {
-            model->qp = fopen(current_file, "rb");
-            model->qp_status = 1;
-        }
-        file_count++;
-    }
-
-    sprintf(current_file, "%s/qs.dat", mscal_data_directory);
-    if (access(current_file, R_OK) == 0) {
-                if( !too_big() ) { // only if fit
-            model->qs = malloc(base_malloc);
-            if (model->qs != NULL) {
-            // Read the model in.
-            fp = fopen(current_file, "rb");
-            fread(model->qs, 1, base_malloc, fp);
-                        all_read_to_memory++;
-            model->qs_status = 2;
-            } else {
-            model->qs = fopen(current_file, "rb");
-            model->qs_status = 1;
-            }
-        } else {
-            model->qs = fopen(current_file, "rb");
-            model->qs_status = 1;
-        }
-        file_count++;
-    }
-
-    if (file_count == 0)
-        return FAIL;
-    else if (file_count > 0 && all_read_to_memory != file_count)
-        return SUCCESS;
-    else
-        return 2;
 }
 
 // The following functions are for dynamic library mode. If we are compiling

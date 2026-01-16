@@ -57,54 +57,28 @@ Total elements: 15073884
 **/
 
 /** The MSCAL configuration structure. */
-
-/** The model structure which points to available portions of the model. */
-typedef struct mscal_model_t {
-        /** A pointer to the Vs data either in memory or disk. Null if does not exist. */
-        void *vs;
-        /** Vs status: 0 = not found, 1 = found and not in memory, 2 = found and in memory */
-        int vs_status;
-        /** A pointer to the Vp data either in memory or disk. Null if does not exist. */
-        void *vp;
-        /** Vp status: 0 = not found, 1 = found and not in memory, 2 = found and in memory */
-        int vp_status;
-        /** A pointer to the rho data either in memory or disk. Null if does not exist. */
-        void *rho;
-        /** Rho status: 0 = not found, 1 = found and not in memory, 2 = found and in memory */
-        int rho_status;
-        /** A pointer to the Qp data either in memory or disk. Null if does not exist. */
-        void *qp;
-        /** Qp status: 0 = not found, 1 = found and not in memory, 2 = found and in memory */
-        int qp_status;
-        /** A pointer to the Qs data either in memory or disk. Null if does not exist. */
-        void *qs;
-        /** Qs status: 0 = not found, 1 = found and not in memory, 2 = found and in memory */
-        int qs_status;
-} mscal_model_t;
-
-
 typedef struct mscal_dataset_t {
 	/** tracking netcdf id **/
         int ncid;
 
-	/** Number of x points */
+	/** Number of x(lon) points */
 	int nx;
-	/** Number of y points */
+	/** Number of y(lat) points */
 	int ny;
-	/** Number of z points */
+	/** Number of z(dep) points */
 	int nz;
 
-	/** dataset **/
-	char *label;
-        char *file;
-        mscal_model_t *model;
-
-	/** list of latitudes **/
-	float *latitudes;
 	/** list of longitudes **/
 	float *longitudes;
+	/** list of latitudes **/
+	float *latitudes;
 	/** list of depths **/
 	float *depths;
+
+	int elems;
+	float *vp_buffer;
+	float *vs_buffer;
+	float *rho_buffer;
 
 } mscal_dataset_t;
 
@@ -115,26 +89,34 @@ typedef struct mscal_configuration_t {
 	char model_dir[128];
         /** GTL on or off (1 or 0) */
         int gtl;
+	/** interpolation (1 or 0) */
+	int interpolation;
 
-/* per dataset -- max is 10*/
+        /* how many datasets are in the model */
+        int dataset_cnt;
+        char *dataset_files[MSCAL_DATASET_MAX];  //strdup
+	char *dataset_labels[MSCAL_DATASET_MAX]; // strdup
+} mscal_configuration_t;
+
+typedef struct mscal_model_t {
         int dataset_cnt;
         mscal_dataset_t datasets[MSCAL_DATASET_MAX];
+} mscal_model_t;
 
-} mscal_configuration_t;
 
 // Constants
 /** The version of the model. */
-const char *mscal_version_string = "MSCAL";
+extern const char *mscal_version_string;
 
 // Variables
 /** Set to 1 when the model is ready for query. */
-int mscal_is_initialized = 0;
+extern int mscal_is_initialized;
 
 /** Configuration parameters. */
-mscal_configuration_t *mscal_configuration;
+extern mscal_configuration_t *mscal_configuration;
 
 /** Holds pointers to the velocity model data OR indicates it can be read from file. */
-mscal_model_t *mscal_velocity_model;
+extern mscal_model_t *mscal_velocity_model;
 
 // UCVM API Required Functions
 
@@ -175,6 +157,14 @@ void mscal_print_error(char *err);
 /** Retrieves the value at a specified grid point in the model. */
 void mscal_read_properties(int x, int y, int z, mscal_properties_t *data);
 /** Attempts to malloc the model size in memory and read it in. */
-int mscal_try_reading_model(mscal_model_t *model);
+int mscal_read_model(mscal_configuration_t *config, mscal_model_t *model, char* dir);
 /** toggle debug flag **/
 void mscal_setdebug();
+/** free the allocated memory **/
+int mscal_configuration_finalize(mscal_configuration_t *config);
+/** free the allocated memory **/
+int mscal_velocity_model_finalize(mscal_model_t *model);
+/** parse JSON metadata blob per dataset **/
+int _setup_a_dataset(mscal_configuration_t *conf, char *blobstr);
+void _trimLast(char *str, char m);
+void _splitline(char* lptr, char key[], char value[]);
