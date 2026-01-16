@@ -92,27 +92,11 @@ def main():
     if not os.path.isdir(mdir) :
         subprocess.check_call(["mkdir", "-p", mdir])
 
-    fname=mdir+"/density.dat"
-    tarfile=mdir+"/density.tar.gz"
+    fname=mdir+"/model_updated_CenCal2.nc"
+    tarfile=mdir+"/model_updated_CenCal2.nc.tar.gz"
     if not os.path.isfile(fname) :
       print("download ", tarfile)
       url = path + "/" + tarfile 
-      download_urlfile(url,tarfile)
-      subprocess.check_call(["tar", "-zxvf", tarfile])
-
-    fname=mdir+"/vp.dat"
-    tarfile=mdir+"/vp.tar.gz"
-    if not os.path.isfile(fname) :
-      print("download ", tarfile)
-      url = path + "/" + tarfile
-      download_urlfile(url,tarfile)
-      subprocess.check_call(["tar", "-zxvf", tarfile])
-
-    fname=mdir+"/vs.dat"
-    tarfile=mdir+"/vs.tar.gz"
-    if not os.path.isfile(fname) :
-      print("download ", tarfile)
-      url = path + "/" + tarfile
       download_urlfile(url,tarfile)
       subprocess.check_call(["tar", "-zxvf", tarfile])
 

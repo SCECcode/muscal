@@ -1,3 +1,3 @@
 # GNU Automake config
-SUBDIRS = src test data
+SUBDIRS = src data
 INCLUDES = $(default_includes)

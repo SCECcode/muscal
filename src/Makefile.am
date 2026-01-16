@@ -1,9 +1,9 @@
 # Autoconf/automake file
 
-objects = um_netcdf.o
+objects = um_netcdf.o cJSON.o
 
 # General compiler/linker flags
-AM_CFLAGS = ${CFLAGS} -I$(prefix)/include
+AM_CFLAGS = ${CFLAGS} ${CPPFLAGS} -I$(prefix)/include
 AM_LDFLAGS = ${LDFLAGS} -L$(prefix)/lib -lm
 
 
@@ -30,9 +30,6 @@ libmscal.a: mscal_static.o um_netcdf.o cJSON.o
 libmscal.so: mscal.o  um_netcdf.o cJSON.o
 	$(CC) -shared $(AM_FCFLAGS) -o libmscal.so $^ $(AM_LDFLAGS)
 
-cJSON.o: cJSON.c
-	$(CC) -fPIC -DDYNAMIC_LIBRARY $(AM_CFLAGS) -o $@ -c $^
-
 mscal.o: mscal.c
 	$(CC) -fPIC -DDYNAMIC_LIBRARY -o $@ -c $^ $(AM_CFLAGS)
 
@@ -40,7 +37,7 @@ mscal_static.o: mscal.c
 	$(CC) -o $@ -c $^ $(AM_CFLAGS)
 
 $(objects): %.o: %.c
-	$(CC) -o $@ -c $^ $(AM_CFLAGS)
+	$(CC) -fPIC -DDYNAMIC_LIBRARY $(AM_CFLAGS) -o $@ -c $^
 
 mscal_query.o: mscal_query.c
 	$(CC) $(AM_CFLAGS) -o $@ -c $^

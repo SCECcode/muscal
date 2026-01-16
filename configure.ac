@@ -6,11 +6,6 @@ AC_INIT(CS248, 1.1.0, software@scec.org)
 AC_CONFIG_MACRO_DIRS([m4])
 AM_INIT_AUTOMAKE([foreign tar-pax no-exeext])
 
-AC_PROG_MKDIR_P
-LT_INIT
-AC_PROG_INSTALL
-
-
 dnl
 dnl Dependencies
 dnl
@@ -20,6 +15,7 @@ dnl Command line tools
 dnl
 
 AC_PROG_CC
+AC_PROG_CXX
 AC_PROG_INSTALL
 AC_PROG_MKDIR_P
 
