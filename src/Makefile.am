@@ -4,7 +4,7 @@ objects = um_netcdf.o cJSON.o
 
 # General compiler/linker flags
 AM_CFLAGS = ${CFLAGS} ${CPPFLAGS} -I$(prefix)/include
-AM_LDFLAGS = ${LDFLAGS} -L$(prefix)/lib -lm
+AM_LDFLAGS = ${LDFLAGS} -L$(prefix)/lib ${LIBS} -lm
 
 
 TARGETS = mscal_query libmscal.a libmscal.so
