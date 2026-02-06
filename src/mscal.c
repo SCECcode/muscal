@@ -15,6 +15,8 @@
 
 int mscal_ucvm_debug=0;
 
+int TooBig=1;
+
 /** The config of the model */
 char *mscal_config_string=NULL;
 int mscal_config_sz=0;
@@ -123,6 +125,16 @@ int mscal_query(mscal_point_t *points, mscal_properties_t *data, int numpoints) 
     float *vs_buffer=dataset->vs_buffer;
     float *rho_buffer=dataset->rho_buffer;
 
+    float lon_f;
+    float lat_f;
+    float dep_f;
+    int lon_idx;
+    int lat_idx;
+    int dep_idx;
+    float target_vp;
+    float target_vs;
+    float target_rho;
+
     for(int i=0; i<numpoints; i++) {
         data[i].vp = -1;
         data[i].vs = -1;
@@ -130,31 +142,33 @@ int mscal_query(mscal_point_t *points, mscal_properties_t *data, int numpoints) 
         data[i].qp = -1;
         data[i].qs = -1;
 
-        float lon_f=points[i].longitude;
-        float lat_f=points[i].latitude;
-        float dep_f=points[i].depth;
+        lon_f=points[i].longitude;
+        lat_f=points[i].latitude;
+        dep_f=points[i].depth;
 
-        int lon_idx=find_buffer_idx((float *)lon_list,nx,lon_f);
-        int lat_idx=find_buffer_idx((float *)lat_list,ny,lat_f);
-        int dep_idx=find_buffer_idx((float *)dep_list,nz,dep_f);
+        lon_idx=find_buffer_idx((float *)lon_list,nx,lon_f);
+        lat_idx=find_buffer_idx((float *)lat_list,ny,lat_f);
+        dep_idx=find_buffer_idx((float *)dep_list,nz,dep_f);
     
+        if(!TooBig) {
 // offset= (dep_idx)*(lat_cnt * lon_cnt)+(lat_idx)*(lon_cnt)+lon_idx
-        int offset= (dep_idx)*(ny * nx)+(lat_idx)*(nx)+lon_idx;
+          int offset= (dep_idx)*(ny * nx)+(lat_idx)*(nx)+lon_idx;
 
-        if(mscal_ucvm_debug) {
-          fprintf(stderr,"\nTarget offset %d : idx lon/lat/dep = %d/%d/%d\n", offset,lon_idx, lat_idx, dep_idx);
+          if(mscal_ucvm_debug) {
+            fprintf(stderr,"\nTarget offset %d : idx lon/lat/dep = %d/%d/%d\n", offset,lon_idx, lat_idx, dep_idx);
+          }
+          target_vp=((float *)vp_buffer)[offset];
+          target_vs=((float *)vs_buffer)[offset];
+          target_rho=((float *)rho_buffer)[offset];
+          } else {
+             target_vp=get_nc_vara_float(dataset->ncid, dataset->vp_varid, dep_idx, lat_idx, lon_idx);
+             target_vs=get_nc_vara_float(dataset->ncid, dataset->vs_varid, dep_idx, lat_idx, lon_idx);
+             target_rho=get_nc_vara_float(dataset->ncid, dataset->rho_varid, dep_idx, lat_idx, lon_idx);
         }
-
-        float target_vp=((float *)vp_buffer)[offset];
-        float target_vs=((float *)vs_buffer)[offset];
-        float target_rho=((float *)rho_buffer)[offset];
-
         data[i].vp = target_vp;
         data[i].vs = target_vs;
         data[i].rho = target_rho;
-
     }
-
     return SUCCESS;
 }
 
@@ -379,17 +393,26 @@ int mscal_read_model(mscal_configuration_t *config, mscal_model_t *model, char *
 
         /* load the vp/vs/rho in memory  TODO: figure what happen if too big */
 	    /* Get variable ID by name */
-        data->vp_buffer=get_nc_buffer(data->ncid, "vp", filepath, &vtype, &nelems, 3);
-        if(vtype != NC_FLOAT) { fprintf(stderr,"BADDD.. vtype panic"); }
-	data->elems=nelems;
+        if(!TooBig) {
+          data->vp_buffer=get_nc_buffer(data->ncid, "vp", filepath, &vtype, &nelems, 3);
+          if(vtype != NC_FLOAT) { fprintf(stderr,"BADDD.. vtype panic"); }
+          if(data->vp_buffer == 0) { fprintf(stderr,"PANIC malloc vs\n"); return FAIL; }
+	  data->elems=nelems;
 
-        data->vs_buffer=get_nc_buffer(data->ncid, "vs", filepath, &vtype, &nelems, 3);
-        if(vtype != NC_FLOAT) { fprintf(stderr,"BADDD.. vtype panic"); }
-        if(data->elems != nelems) { fprintf(stderr,"BADDD.. nelems panic"); }
+          data->vs_buffer=get_nc_buffer(data->ncid, "vs", filepath, &vtype, &nelems, 3);
+          if(vtype != NC_FLOAT) { fprintf(stderr,"BADDD.. vtype panic"); }
+          if(data->vs_buffer == 0) { fprintf(stderr,"PANIC malloc vs\n"); return FAIL; }
+          if(data->elems != nelems) { fprintf(stderr,"BADDD.. nelems panic"); }
 
-        data->rho_buffer=get_nc_buffer(data->ncid, "rho", filepath, &vtype, &nelems, 3);
-        if(vtype != NC_FLOAT) { fprintf(stderr,"BADDD.. vtype panic"); }
-        if(data->elems != nelems) { fprintf(stderr,"BADDD.. nelems panic"); }
+          data->rho_buffer=get_nc_buffer(data->ncid, "rho", filepath, &vtype, &nelems, 3);
+          if(vtype != NC_FLOAT) { fprintf(stderr,"BADDD.. vtype panic"); }
+          if(data->rho_buffer == 0) { fprintf(stderr,"PANIC malloc rho\n");  return FAIL; }
+          if(data->elems != nelems) { fprintf(stderr,"BADDD.. nelems panic"); }
+          } else { // else, setup varid only
+            data->vp_varid=inq_nc_varid(data->ncid,"vp",filepath);
+            data->vs_varid=inq_nc_varid(data->ncid,"vs",filepath);
+            data->rho_varid=inq_nc_varid(data->ncid,"rho",filepath);
+        }
 
     }
     return SUCCESS;

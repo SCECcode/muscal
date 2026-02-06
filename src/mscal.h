@@ -80,6 +80,10 @@ typedef struct mscal_dataset_t {
 	float *vs_buffer;
 	float *rho_buffer;
 
+	int vp_varid;
+	int vs_varid;
+	int rho_varid;
+
 } mscal_dataset_t;
 
 typedef struct mscal_configuration_t {
