@@ -126,6 +126,7 @@ void *get_nc_buffer(int ncid, const char *varname, const char *path, nc_type *vt
     void *buffer = NULL;
     size_t elem_size = 0;
     nc_type nvtype;
+    fprintf(stderr,"get_nc_buffer..%s\n",varname);
 
 
        /* grab for longitude */
@@ -205,9 +206,10 @@ void *get_nc_buffer(int ncid, const char *varname, const char *path, nc_type *vt
             break;
 
         case NC_FLOAT:
-            //fprintf(stderr," buffer of NC_FLOAT \n");
+            fprintf(stderr,"   buffer of NC_FLOAT \n");
             elem_size = sizeof(float);
             buffer = malloc(nnelems * elem_size);
+            fprintf(stderr,"   needs %d \n",nnelems * elem_size);
             if (!buffer) { fprintf(stderr, "malloc failed\n"); goto cleanup; }
             NC_CHECK(nc_get_var_float(ncid, varid, (float*)buffer));
             break;
@@ -274,6 +276,17 @@ int find_buffer_idx(float *buffer, size_t nelems, float target) {
 
     int idx=(fabsf(left - target) <= fabsf(right - target)) ? (int)(lo - 1) : (int)lo;
     return idx;
-
 }
 
+
+float get_nc_vara_float(int ncid, int varid, int dep_idx, int lat_idx, int lon_idx) {
+// depth, lat, lon
+  size_t start[] = {dep_idx, lat_idx, lon_idx};
+  size_t count[] = {1, 1, 1};
+
+  float val;
+  int status = nc_get_vara_float(ncid, varid, start, count, &val);
+  if (status != NC_NOERR) { fprintf(stderr, "netCDF error: %s\n", nc_strerror(status)); }
+
+return val;
+}
