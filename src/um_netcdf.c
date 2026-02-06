@@ -126,7 +126,7 @@ void *get_nc_buffer(int ncid, const char *varname, const char *path, nc_type *vt
     void *buffer = NULL;
     size_t elem_size = 0;
     nc_type nvtype;
-    fprintf(stderr,"get_nc_buffer..%s\n",varname);
+    //fprintf(stderr,"get_nc_buffer..%s\n",varname);
 
 
        /* grab for longitude */
@@ -206,10 +206,10 @@ void *get_nc_buffer(int ncid, const char *varname, const char *path, nc_type *vt
             break;
 
         case NC_FLOAT:
-            fprintf(stderr,"   buffer of NC_FLOAT \n");
+            //fprintf(stderr,"   buffer of NC_FLOAT \n");
             elem_size = sizeof(float);
             buffer = malloc(nnelems * elem_size);
-            fprintf(stderr,"   needs %d \n",nnelems * elem_size);
+            //fprintf(stderr,"   needs %d \n",nnelems * elem_size);
             if (!buffer) { fprintf(stderr, "malloc failed\n"); goto cleanup; }
             NC_CHECK(nc_get_var_float(ncid, varid, (float*)buffer));
             break;
