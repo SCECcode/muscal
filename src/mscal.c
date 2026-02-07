@@ -121,6 +121,7 @@ int mscal_query(mscal_point_t *points, mscal_properties_t *data, int numpoints) 
     int nx=dataset->nx;
     int ny=dataset->ny;
     int nz=dataset->nz;
+
     float *vp_buffer=dataset->vp_buffer;
     float *vs_buffer=dataset->vs_buffer;
     float *rho_buffer=dataset->rho_buffer;
@@ -128,13 +129,21 @@ int mscal_query(mscal_point_t *points, mscal_properties_t *data, int numpoints) 
     float lon_f;
     float lat_f;
     float dep_f;
-    int lon_idx;
-    int lat_idx;
-    int dep_idx;
-    float target_vp;
-    float target_vs;
-    float target_rho;
+    int lon_idx, first_lon_idx;
+    int lat_idx, first_lat_idx;
+    int dep_idx, first_dep_idx;
+    int same_lon_idx=1;
+    int same_lat_idx=1;
+    int same_dep_idx=1;
 
+    size_t *dep_idx_buffer;
+    size_t *lat_idx_buffer;
+    size_t *lon_idx_buffer;
+
+    // if not TooBig, grab from in memory buffer one at a time
+    // if tooBig, then collect up all the index list and make just one call and
+    // retrieve and disperse the result back into data
+    
     for(int i=0; i<numpoints; i++) {
         data[i].vp = -1;
         data[i].vs = -1;
@@ -149,26 +158,144 @@ int mscal_query(mscal_point_t *points, mscal_properties_t *data, int numpoints) 
         lon_idx=find_buffer_idx((float *)lon_list,nx,lon_f);
         lat_idx=find_buffer_idx((float *)lat_list,ny,lat_f);
         dep_idx=find_buffer_idx((float *)dep_list,nz,dep_f);
+
     
-        if(!TooBig) {
+        if(!TooBig) { // extract from buffers one at a time
 // offset= (dep_idx)*(lat_cnt * lon_cnt)+(lat_idx)*(lon_cnt)+lon_idx
           int offset= (dep_idx)*(ny * nx)+(lat_idx)*(nx)+lon_idx;
 
           if(mscal_ucvm_debug) {
             fprintf(stderr,"\nTarget offset %d : idx lon/lat/dep = %d/%d/%d\n", offset,lon_idx, lat_idx, dep_idx);
           }
-          target_vp=((float *)vp_buffer)[offset];
-          target_vs=((float *)vs_buffer)[offset];
-          target_rho=((float *)rho_buffer)[offset];
-          } else {
-             target_vp=get_nc_vara_float(dataset->ncid, dataset->vp_varid, dep_idx, lat_idx, lon_idx);
-             target_vs=get_nc_vara_float(dataset->ncid, dataset->vs_varid, dep_idx, lat_idx, lon_idx);
-             target_rho=get_nc_vara_float(dataset->ncid, dataset->rho_varid, dep_idx, lat_idx, lon_idx);
+          data[i].vp = ((float *)vp_buffer)[offset];
+          data[i].vs = ((float *)vs_buffer)[offset];
+          data[i].rho = ((float *)rho_buffer)[offset];
+
+          } else { // compose a list of idx and make a batch call
+             if(i == 0) { /* malloc space to hold idx */
+	       dep_idx_buffer = malloc(numpoints * sizeof(size_t));
+	       if (!dep_idx_buffer) { fprintf(stderr, "malloc failed\n");}
+	       lat_idx_buffer = malloc(numpoints * sizeof(size_t));
+	       if (!lat_idx_buffer) { fprintf(stderr, "malloc failed\n");}
+	       lon_idx_buffer = malloc(numpoints * sizeof(size_t));
+	       if (!lon_idx_buffer) { fprintf(stderr, "malloc failed\n");}
+
+	       vp_buffer = malloc(numpoints * sizeof(float));
+	       if (!vp_buffer) { fprintf(stderr, "malloc failed\n");}
+	       vs_buffer = malloc(numpoints * sizeof(float));
+	       if (!vs_buffer) { fprintf(stderr, "malloc failed\n");}
+	       rho_buffer = malloc(numpoints * sizeof(float));
+	       if (!rho_buffer) { fprintf(stderr, "malloc failed\n");}
+
+	       first_dep_idx=dep_idx;
+	       first_lon_idx=lon_idx;
+               first_lat_idx=lat_idx;
+             }
+             dep_idx_buffer[i]=dep_idx;
+             lat_idx_buffer[i]=lat_idx;
+             lon_idx_buffer[i]=lon_idx;
+             // check if same depth, same lat, or same lon
+	     if(dep_idx != first_dep_idx) same_dep_idx=0;
+	     if(lon_idx != first_lon_idx) same_lon_idx=0;
+	     if(lat_idx != first_lat_idx) same_lat_idx=0;
         }
-        data[i].vp = target_vp;
-        data[i].vs = target_vs;
-        data[i].rho = target_rho;
     }
+    // XXX
+    if(TooBig) { /* make final calls */
+      // if same_lon_idx and same_lat_idx,
+      // it is depth profile
+      //    extract the whole colume with dataset->nz for different set 
+      //    and then extract data from buffer one at a time using dep_idx 
+      if(same_lon_idx && same_lat_idx ) {
+        float *tmp_buffer = malloc(dataset->nz * sizeof(float));
+        if (!tmp_buffer) { fprintf(stderr, "malloc failed\n");}
+
+        cache_depth_col_float(dataset->ncid, dataset->vp_varid,
+		dataset->nz, first_lat_idx, first_lon_idx, tmp_buffer);
+        for(int i=0; i<numpoints; i++) { 
+	   dep_idx=dep_idx_buffer[i];
+	   vp_buffer[i]=tmp_buffer[dep_idx];
+	}
+        cache_depth_col_float(dataset->ncid, dataset->vs_varid,
+		dataset->nz, first_lat_idx, first_lon_idx, tmp_buffer);
+        for(int i=0; i<numpoints; i++) { 
+	   dep_idx=dep_idx_buffer[i];
+	   vs_buffer[i]=tmp_buffer[dep_idx];
+	}
+        cache_depth_col_float(dataset->ncid, dataset->rho_varid,
+		dataset->nz, first_lat_idx, first_lon_idx, tmp_buffer);
+        for(int i=0; i<numpoints; i++) { 
+	   dep_idx=dep_idx_buffer[i];
+	   rho_buffer[i]=tmp_buffer[dep_idx];
+	}
+        free(tmp_buffer);
+
+      } else if (same_dep_idx) { 
+      // if same_dep_idx, it is a horizontal slice
+      //   extract the whole layer using dataset->nx and dataset->ny
+      //   and then extract data from buffer using lon_idx, and lat_idx
+        float *tmp_buffer = malloc((dataset->nx *dataset->ny) * sizeof(float));
+	size_t offset;
+
+        cache_latlon_layer_float(dataset->ncid, dataset->vp_varid,
+		lon_idx, dataset->ny, dataset->nx, tmp_buffer);
+        for(int i=0; i<numpoints; i++) { 
+          lat_idx=lat_idx_buffer[i];
+	  lon_idx=lon_idx_buffer[i];
+	  offset= lat_idx * dataset->ny + lon_idx;
+	  vp_buffer[i]=tmp_buffer[offset];
+        }
+
+        cache_latlon_layer_float(dataset->ncid, dataset->vs_varid,
+		lon_idx, dataset->ny, dataset->nx, tmp_buffer);
+        for(int i=0; i<numpoints; i++) { 
+          lat_idx=lat_idx_buffer[i];
+	  lon_idx=lon_idx_buffer[i];
+	  offset= lat_idx * dataset->ny + lon_idx;
+	  vs_buffer[i]=tmp_buffer[offset];
+        }
+
+        cache_latlon_layer_float(dataset->ncid, dataset->rho_varid,
+		lon_idx, dataset->ny, dataset->nx, tmp_buffer);
+        for(int i=0; i<numpoints; i++) { 
+          lat_idx=lat_idx_buffer[i];
+	  lon_idx=lon_idx_buffer[i];
+	  offset= lat_idx * dataset->ny + lon_idx;
+	  rho_buffer[i]=tmp_buffer[offset];
+        }
+
+        free(tmp_buffer);
+      
+//XXX
+      } else {  // it is so random
+
+        for(int i=0; i<numpoints; i++) { 
+           lat_idx=lat_idx_buffer[i];
+           lon_idx=lon_idx_buffer[i];
+           dep_idx=dep_idx_buffer[i];
+           vp_buffer[i]=get_nc_vara_float(dataset->ncid, dataset->vp_varid, dep_idx, lat_idx, lon_idx);
+           vs_buffer[i]=get_nc_vara_float(dataset->ncid, dataset->vp_varid, dep_idx, lat_idx, lon_idx);
+           rho_buffer[i]=get_nc_vara_float(dataset->ncid, dataset->vp_varid, dep_idx, lat_idx, lon_idx);
+        }
+      }
+
+
+// finally copy the data over
+      for(int i=0; i<numpoints; i++) {
+        data[i].vp = ((float *) vp_buffer)[i];
+        data[i].vs = ((float *) vs_buffer)[i];
+        data[i].rho = ((float *) rho_buffer)[i];
+      }
+
+      free(dep_idx_buffer);
+      free(lat_idx_buffer);
+      free(lon_idx_buffer);
+      free(vp_buffer);
+      free(vs_buffer);
+      free(rho_buffer);
+    }
+
+
     return SUCCESS;
 }
 

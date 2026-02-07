@@ -29,6 +29,14 @@ void *get_nc_buffer(int ncid, const char *varname, const char *path, nc_type *vt
 int find_buffer_idx(float *buffer, size_t nelems, float target);
 float get_nc_vara_float(int ncid, int varid, int dep_idx, int lat_idx, int lon_idx);
 
+int cache_depth_col_float(int ncid, int varid,
+                size_t ndepth, size_t lat_idx, size_t lon_idx,
+                float *col /* size >= ndepth */);
+
+int cache_latlon_layer_float(int ncid, int varid,
+                size_t dep_idx, size_t nlat, size_t nlon,
+                float *layer /* size >= nlat*nlon */);
+
 #endif
 
 

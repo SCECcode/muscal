@@ -126,7 +126,7 @@ void *get_nc_buffer(int ncid, const char *varname, const char *path, nc_type *vt
     void *buffer = NULL;
     size_t elem_size = 0;
     nc_type nvtype;
-    //fprintf(stderr,"get_nc_buffer..%s\n",varname);
+    fprintf(stderr,"get_nc_buffer..%s\n",varname);
 
 
        /* grab for longitude */
@@ -206,10 +206,10 @@ void *get_nc_buffer(int ncid, const char *varname, const char *path, nc_type *vt
             break;
 
         case NC_FLOAT:
-            //fprintf(stderr,"   buffer of NC_FLOAT \n");
+            fprintf(stderr,"   buffer of NC_FLOAT \n");
             elem_size = sizeof(float);
             buffer = malloc(nnelems * elem_size);
-            //fprintf(stderr,"   needs %d \n",nnelems * elem_size);
+            fprintf(stderr,"   needs %d \n",nnelems * elem_size);
             if (!buffer) { fprintf(stderr, "malloc failed\n"); goto cleanup; }
             NC_CHECK(nc_get_var_float(ncid, varid, (float*)buffer));
             break;
@@ -290,3 +290,40 @@ float get_nc_vara_float(int ncid, int varid, int dep_idx, int lat_idx, int lon_i
 
 return val;
 }
+
+
+// improve access speed
+// vertical = same lat-idx, same lon-idx,  z varies
+// horizontal= all lat-idx, all-lon-idx,  same z
+// dep profile = one lat-idx, one lon-idx,  z varies
+//
+int cache_depth_col_float(int ncid, int varid, 
+		size_t ndepth, size_t lat_idx, size_t lon_idx,
+                float *col /* size >= ndepth */) {
+
+    size_t start[3] = {0, lat_idx, lon_idx};
+    size_t count[3] = {ndepth, 1, 1};
+
+    int status = nc_get_vara_float(ncid, varid, start, count, col);
+    if (status != NC_NOERR) {
+        fprintf(stderr, "netCDF error (cache_depth_col_float): %s\n",
+                nc_strerror(status));
+        return status;
+    }
+    return NC_NOERR;
+}
+
+int cache_latlon_layer_float(int ncid, int varid,
+                size_t dep_idx, size_t nlat, size_t nlon,
+                float *layer /* size >= nlat*nlon */)
+{
+    size_t start[] = {dep_idx, 0, 0};
+    size_t count[] = {1, nlat, nlon};
+    int status = nc_get_vara_float(ncid, varid, start, count, layer);
+    if (status != NC_NOERR) {
+        fprintf(stderr, "netCDF error (chache_latlon_layer_float): %s\n", nc_strerror(status));
+        return status;
+    }
+    return NC_NOERR;
+}
+
