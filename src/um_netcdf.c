@@ -316,11 +316,15 @@ int cache_latlon_layer_float(int ncid, int varid,
                 size_t dep_idx, size_t nlat, size_t nlon,
                 float *layer /* size >= nlat*nlon */)
 {
+ if(debug) {fprintf(stderr," layer, calling layer_float %d %d (%d) \n", nlat, nlon, (nlat * nlon)); }
+ if(debug) {fprintf(stderr," layer, using dep_idx %d\n", dep_idx); }
+
     size_t start[] = {dep_idx, 0, 0};
     size_t count[] = {1, nlat, nlon};
     int status = nc_get_vara_float(ncid, varid, start, count, layer);
+
     if (status != NC_NOERR) {
-        fprintf(stderr, "netCDF error (chache_latlon_layer_float): %s\n", nc_strerror(status));
+        fprintf(stderr, "netCDF error (cache_latlon_layer_float): %s\n", nc_strerror(status));
         return status;
     }
     return NC_NOERR;

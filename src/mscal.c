@@ -155,9 +155,14 @@ int mscal_query(mscal_point_t *points, mscal_properties_t *data, int numpoints) 
         lat_f=points[i].latitude;
         dep_f=points[i].depth;
 
+    if(mscal_ucvm_debug){ fprintf(stderr,"\nfloat lon/lat/dep = %f/%f/%f\n", lon_f, lat_f, dep_f); }
+
         lon_idx=find_buffer_idx((float *)lon_list,nx,lon_f);
         lat_idx=find_buffer_idx((float *)lat_list,ny,lat_f);
         dep_idx=find_buffer_idx((float *)dep_list,nz,dep_f);
+    if(mscal_ucvm_debug){ fprintf(stderr,"----> depth list is %d  (40)%f (670)%f\n", nz, dep_list[40], dep_list[670]);}
+
+    if(mscal_ucvm_debug){ fprintf(stderr,"\nidx lon/lat/dep = %d/%d/%d\n", lon_idx, lat_idx, dep_idx); }
 
     
         if(!TooBig) { // extract from buffers one at a time
@@ -200,6 +205,9 @@ int mscal_query(mscal_point_t *points, mscal_properties_t *data, int numpoints) 
 	     if(lat_idx != first_lat_idx) same_lat_idx=0;
         }
     }
+
+    if(mscal_ucvm_debug){ fprintf(stderr," same %d %d %d\n", same_dep_idx, same_lon_idx, same_lat_idx);
+    }
     // XXX
     if(TooBig) { /* make final calls */
       // if same_lon_idx and same_lat_idx,
@@ -207,23 +215,23 @@ int mscal_query(mscal_point_t *points, mscal_properties_t *data, int numpoints) 
       //    extract the whole colume with dataset->nz for different set 
       //    and then extract data from buffer one at a time using dep_idx 
       if(same_lon_idx && same_lat_idx ) {
-        float *tmp_buffer = malloc(dataset->nz * sizeof(float));
+        float *tmp_buffer = malloc(nz * sizeof(float));
         if (!tmp_buffer) { fprintf(stderr, "malloc failed\n");}
 
         cache_depth_col_float(dataset->ncid, dataset->vp_varid,
-		dataset->nz, first_lat_idx, first_lon_idx, tmp_buffer);
+		nz, first_lat_idx, first_lon_idx, tmp_buffer);
         for(int i=0; i<numpoints; i++) { 
 	   dep_idx=dep_idx_buffer[i];
 	   vp_buffer[i]=tmp_buffer[dep_idx];
 	}
         cache_depth_col_float(dataset->ncid, dataset->vs_varid,
-		dataset->nz, first_lat_idx, first_lon_idx, tmp_buffer);
+		nz, first_lat_idx, first_lon_idx, tmp_buffer);
         for(int i=0; i<numpoints; i++) { 
 	   dep_idx=dep_idx_buffer[i];
 	   vs_buffer[i]=tmp_buffer[dep_idx];
 	}
         cache_depth_col_float(dataset->ncid, dataset->rho_varid,
-		dataset->nz, first_lat_idx, first_lon_idx, tmp_buffer);
+		nz, first_lat_idx, first_lon_idx, tmp_buffer);
         for(int i=0; i<numpoints; i++) { 
 	   dep_idx=dep_idx_buffer[i];
 	   rho_buffer[i]=tmp_buffer[dep_idx];
@@ -234,37 +242,31 @@ int mscal_query(mscal_point_t *points, mscal_properties_t *data, int numpoints) 
       // if same_dep_idx, it is a horizontal slice
       //   extract the whole layer using dataset->nx and dataset->ny
       //   and then extract data from buffer using lon_idx, and lat_idx
-        float *tmp_buffer = malloc((dataset->nx *dataset->ny) * sizeof(float));
+        float *tmp_vp_buffer = malloc((nx*ny) * sizeof(float));
+        float *tmp_vs_buffer = malloc((nx*ny) * sizeof(float));
+        float *tmp_rho_buffer = malloc((nx*ny) * sizeof(float));
 	size_t offset;
 
         cache_latlon_layer_float(dataset->ncid, dataset->vp_varid,
-		lon_idx, dataset->ny, dataset->nx, tmp_buffer);
-        for(int i=0; i<numpoints; i++) { 
-          lat_idx=lat_idx_buffer[i];
-	  lon_idx=lon_idx_buffer[i];
-	  offset= lat_idx * dataset->ny + lon_idx;
-	  vp_buffer[i]=tmp_buffer[offset];
-        }
-
+		dep_idx, ny, nx, tmp_vp_buffer);
         cache_latlon_layer_float(dataset->ncid, dataset->vs_varid,
-		lon_idx, dataset->ny, dataset->nx, tmp_buffer);
-        for(int i=0; i<numpoints; i++) { 
-          lat_idx=lat_idx_buffer[i];
-	  lon_idx=lon_idx_buffer[i];
-	  offset= lat_idx * dataset->ny + lon_idx;
-	  vs_buffer[i]=tmp_buffer[offset];
-        }
-
+		dep_idx, ny, nx, tmp_vs_buffer);
         cache_latlon_layer_float(dataset->ncid, dataset->rho_varid,
-		lon_idx, dataset->ny, dataset->nx, tmp_buffer);
+		dep_idx, ny, nx, tmp_rho_buffer);
+
         for(int i=0; i<numpoints; i++) { 
           lat_idx=lat_idx_buffer[i];
 	  lon_idx=lon_idx_buffer[i];
-	  offset= lat_idx * dataset->ny + lon_idx;
-	  rho_buffer[i]=tmp_buffer[offset];
+	  offset= (lat_idx * ny) + lon_idx;
+	  vp_buffer[i]=tmp_vp_buffer[offset];
+if( mscal_ucvm_debug) {fprintf(stderr,"VP(%d): offset is %d found %f\n",i, offset, tmp_vp_buffer[offset]); }
+	  vs_buffer[i]=tmp_vs_buffer[offset];
+	  rho_buffer[i]=tmp_rho_buffer[offset];
         }
 
-        free(tmp_buffer);
+        free(tmp_vp_buffer);
+        free(tmp_vs_buffer);
+        free(tmp_rho_buffer);
       
 //XXX
       } else {  // it is so random

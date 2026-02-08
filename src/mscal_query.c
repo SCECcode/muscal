@@ -54,8 +54,12 @@ extern int optind, opterr, optopt;
 int main(int argc, char* const argv[]) {
 
 	// Declare the structures.
-	mscal_point_t pt;
-	mscal_properties_t ret;
+	mscal_point_t *pt;
+	mscal_properties_t *ret;
+
+	pt = malloc(10 * sizeof(mscal_point_t));
+	ret = malloc(10 * sizeof(mscal_properties_t));
+
         int rc;
         int opt;
 
@@ -89,29 +93,37 @@ int main(int argc, char* const argv[]) {
 	printf("Loaded the model successfully.\n");
 
         char line[1001];
-        while (fgets(line, 1000, stdin) != NULL) {
+        int done=0;
+        int idx=0;
 
+        while ( !done  && fgets(line, 1000, stdin) != NULL) {
+           if(idx > 10) {
+              done=1;
+              continue;
+           }
+          
            if(mscal_debug) {
              fprintf(stderr,"LINE: %s\n",line);
            }
 
            if(line[0]=='#') continue; // comment line
            if (sscanf(line,"%lf %lf %lf",
-                   &pt.longitude,&pt.latitude,&pt.depth) == 3) {
+                   &pt[idx].longitude,&pt[idx].latitude,&pt[idx].depth) == 3) {
 
               if(mscal_debug) {
                   fprintf(stderr, "calling : with %f,%f using > depth(%f)\n",
-                         pt.longitude,pt.latitude,pt.depth);
+                         pt[idx].longitude,pt[idx].latitude,pt[idx].depth);
               }
+              idx++;
+           }
+        }
 
-	      rc=mscal_query(&pt, &ret, 1);
-              if(rc == 0) {
-                printf("vs:%lf vp:%lf rho:%lf\n",ret.vs, ret.vp, ret.rho);
-                } else {
-                   printf("BAD: %lf %lf %lf\n",pt.longitude, pt.latitude, pt.depth);
-              }
-              } else {
-                 break;
+        if(idx > 0) {
+	   rc=mscal_query(pt, ret, idx);
+           if(rc == 0) {
+             for(int i=0; i<idx; i++) {
+               printf("vs:%lf vp:%lf rho:%lf\n",ret[i].vs, ret[i].vp, ret[i].rho);
+             }
            }
         }
 
