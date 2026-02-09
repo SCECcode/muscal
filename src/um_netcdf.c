@@ -15,7 +15,7 @@ int open_nc(const char* path) {
 }
  
 /* Get variable ID by name */
-int inq_nc_varid(int ncid, const char* varname, const char *path) { 
+int get_nc_varid(int ncid, const char* varname, const char *path) { 
     int varid = -1;
     int status = nc_inq_varid(ncid, varname, &varid);
     if (status != NC_NOERR) {
@@ -29,7 +29,7 @@ int inq_nc_varid(int ncid, const char* varname, const char *path) {
 
 
 /* Inquire variable metadata */
-int inq_nc_var(int ncid, int varid, nc_type *vtype, int *ndims, int **dimids, size_t **dimlens) { 
+int get_nc_var(int ncid, int varid, nc_type *vtype, int *ndims, int **dimids, size_t **dimlens) { 
     int nndims = 0;
     int natts = 0;
     NC_CHECK(nc_inq_var(ncid, varid, NULL, vtype, &nndims, NULL, &natts));
@@ -114,10 +114,9 @@ int print_nc_buffer_offset(nc_type vtype, int offset, void *buffer) {
     }
 }
 
-
 // e_dimlens,  expected dimlens
-void *get_nc_buffer(int ncid, const char *varname, const char *path, nc_type *vtype, size_t *nelems, int e_dimlens) { 
-    int varid = -1;
+void *get_nc_buffer(int ncid, char *varname, const char *path, nc_type *vtype, size_t *nelems, int e_dimlens) { 
+    int varid=-1;
     int ndims = 0;
     int natts = 0;
     size_t nnelems = 1;
@@ -127,10 +126,8 @@ void *get_nc_buffer(int ncid, const char *varname, const char *path, nc_type *vt
     size_t elem_size = 0;
     nc_type nvtype;
 
-
-       /* grab for longitude */
-    varid=inq_nc_varid(ncid, varname, path);
-    nnelems =inq_nc_var(ncid, varid, &nvtype, &ndims, &dimids, &dimlens);
+    varid=get_nc_varid(ncid,varname,path);
+    nnelems =get_nc_var(ncid, varid, &nvtype, &ndims, &dimids, &dimlens);
     // ndims should be 1 or 3
     if(ndims != e_dimlens) {
         fprintf(stderr," Fail to extract %s data\n",varname);
@@ -229,7 +226,7 @@ void *get_nc_buffer(int ncid, const char *varname, const char *path, nc_type *vt
     /* Print some information and sample values */
     if(debug) {
         printf("\nFile: %s\n", path);
-        printf("  Variable: %s\n", varname);
+        printf("  Var name: %s\n", varname);
         printf("  Type: %d\n", (int)nvtype);
         printf("  Dimensions: %d\n", ndims);
         for (int i = 0; i < ndims; ++i) {

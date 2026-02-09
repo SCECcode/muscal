@@ -75,14 +75,28 @@ typedef struct mscal_dataset_t {
 	/** list of depths **/
 	float *depths;
 
-	int elems;
-	float *vp_buffer;
-	float *vs_buffer;
-	float *rho_buffer;
-
 	int vp_varid;
 	int vs_varid;
 	int rho_varid;
+
+	int elems;
+	float *vp_buffer;
+	float *vs_buffer;
+	float *rho_buffer; 
+
+/* a cache of previous layer from cache_latlon_layer_float call */
+        int layer_cache_dep_idx;
+        float *layer_cache_vp_buffer;
+        float *layer_cache_vs_buffer;
+        float *layer_cache_rho_buffer;
+
+/* a cache of previous column from cache_depth_col_float call */
+        int col_cache_lat_idx;
+        int col_cache_lon_idx;
+        float *col_cache_vp_buffer;
+        float *col_cache_vs_buffer;
+        float *col_cache_rho_buffer;
+
 
 } mscal_dataset_t;
 
