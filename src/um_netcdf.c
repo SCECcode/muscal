@@ -312,15 +312,16 @@ int cache_depth_col_float(int ncid, int varid,
     return NC_NOERR;
 }
 
+// ny = n(logitude), ny = n(lattidue)
 int cache_latlon_layer_float(int ncid, int varid,
-                size_t dep_idx, size_t nlat, size_t nlon,
-                float *layer /* size >= nlat*nlon */)
+                size_t dep_idx, size_t ny, size_t nx,
+                float *layer /* size >= ny*nx */)
 {
- if(debug) {fprintf(stderr," layer, calling layer_float %d %d (%d) \n", nlat, nlon, (nlat * nlon)); }
+ if(debug) {fprintf(stderr," layer, calling layer_float %d %d (%d) \n", ny, nx, (ny * nx)); }
  if(debug) {fprintf(stderr," layer, using dep_idx %d\n", dep_idx); }
 
     size_t start[] = {dep_idx, 0, 0};
-    size_t count[] = {1, nlat, nlon};
+    size_t count[] = {1, ny, nx};
     int status = nc_get_vara_float(ncid, varid, start, count, layer);
 
     if (status != NC_NOERR) {

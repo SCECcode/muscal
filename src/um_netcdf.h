@@ -34,8 +34,8 @@ int cache_depth_col_float(int ncid, int varid,
                 float *col /* size >= ndepth */);
 
 int cache_latlon_layer_float(int ncid, int varid,
-                size_t dep_idx, size_t nlat, size_t nlon,
-                float *layer /* size >= nlat*nlon */);
+                size_t dep_idx, size_t ny, size_t nx,
+                float *layer /* size >= ny*nx */);
 
 #endif
 

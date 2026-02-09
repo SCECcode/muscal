@@ -257,7 +257,9 @@ int mscal_query(mscal_point_t *points, mscal_properties_t *data, int numpoints) 
         for(int i=0; i<numpoints; i++) { 
           lat_idx=lat_idx_buffer[i];
 	  lon_idx=lon_idx_buffer[i];
-	  offset= (lat_idx * ny) + lon_idx;
+	  offset= (lat_idx * nx) + lon_idx;
+if (mscal_ucvm_debug)  {fprintf(stderr," LAYER  offset: %d\n", offset); }
+
 	  vp_buffer[i]=tmp_vp_buffer[offset];
 if( mscal_ucvm_debug) {fprintf(stderr,"VP(%d): offset is %d found %f\n",i, offset, tmp_vp_buffer[offset]); }
 	  vs_buffer[i]=tmp_vs_buffer[offset];
@@ -268,7 +270,6 @@ if( mscal_ucvm_debug) {fprintf(stderr,"VP(%d): offset is %d found %f\n",i, offse
         free(tmp_vs_buffer);
         free(tmp_rho_buffer);
       
-//XXX
       } else {  // it is so random
 
         for(int i=0; i<numpoints; i++) { 
