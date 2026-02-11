@@ -334,8 +334,8 @@ if(mscal_ucvm_debug) { fprintf(stderrfp," -- calling get a layer with  %d\n",num
            lon_idx=lon_idx_buffer[i];
            dep_idx=dep_idx_buffer[i];
            vp_buffer[i]=get_nc_vara_float(dataset->ncid, dataset->vp_varid, dep_idx, lat_idx, lon_idx);
-           vs_buffer[i]=get_nc_vara_float(dataset->ncid, dataset->vp_varid, dep_idx, lat_idx, lon_idx);
-           rho_buffer[i]=get_nc_vara_float(dataset->ncid, dataset->vp_varid, dep_idx, lat_idx, lon_idx);
+           vs_buffer[i]=get_nc_vara_float(dataset->ncid, dataset->vs_varid, dep_idx, lat_idx, lon_idx);
+           rho_buffer[i]=get_nc_vara_float(dataset->ncid, dataset->rho_varid, dep_idx, lat_idx, lon_idx);
         }
       }
 
