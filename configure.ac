@@ -20,6 +20,27 @@ AC_PROG_INSTALL
 AC_PROG_MKDIR_P
 AC_PROG_LN_S
 
+
+dnl --- begin: add libtool and --enable-shared handling ---
+# initialize libtool (provides LT_INIT and shared/static helpers)
+# If libtool is not available, autoreconf will tell you.
+LT_INIT
+
+# standard --enable-shared/--disable-shared option
+AC_ARG_ENABLE([shared],
+  [AS_HELP_STRING([--enable-shared|--disable-shared],
+    [build shared libraries (default: enabled)])],
+  [case "${enableval}" in
+     yes) enable_shared=yes ;;
+     no) enable_shared=no ;;
+     *) enable_shared=${enableval} ;;
+   esac],
+  [enable_shared=yes])
+
+# export the variable for Makefile.in / Automake
+AC_SUBST([enable_shared])
+dnl --- end ---
+
 dnl TAR
 AC_PATH_PROG(TAR, tar)
 if test -z "$TAR" ; then
