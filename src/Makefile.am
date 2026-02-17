@@ -1,6 +1,6 @@
 # Autoconf/automake file
 
-objects = um_netcdf.o cJSON.o
+objects = um_netcdf.o mscal_util.o cJSON.o
 
 # General compiler/linker flags
 AM_CFLAGS = ${CFLAGS} ${CPPFLAGS} -I$(prefix)/include
@@ -24,10 +24,10 @@ clean:
 	rm -rf $(TARGETS)
 	rm -rf *.o
 
-libmscal.a: mscal_static.o um_netcdf.o cJSON.o
+libmscal.a: mscal_static.o mscal_util.o um_netcdf.o cJSON.o
 	$(AR) rcs $@ $^
 
-libmscal.so: mscal.o  um_netcdf.o cJSON.o
+libmscal.so: mscal.o mscal_util.o  um_netcdf.o cJSON.o
 	$(CC) -shared $(AM_FCFLAGS) -o libmscal.so $^ $(AM_LDFLAGS)
 
 mscal.o: mscal.c

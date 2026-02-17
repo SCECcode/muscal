@@ -1,12 +1,13 @@
 
 cc -fPIC -DDYNAMIC_LIBRARY -g -O2 -I$UCVM_INSTALL_PATH/model/mscal/include  -o cJSON.o -c cJSON.c 
-cc -g -c um_netcdf.c -o um_netcdf.o -I$UCVM_INSTALL_PATH/lib/hdf5/include -I$UCVM_INSTALL_PATH/lib/netcdf/include 
+cc -fPIC -g -c um_netcdf.c -o um_netcdf.o -I$UCVM_INSTALL_PATH/lib/hdf5/include -I$UCVM_INSTALL_PATH/lib/netcdf/include 
 
-cc -g -c mscal_query.c -o mscal_query.o -I$UCVM_INSTALL_PATH/lib/hdf5/include -I$UCVM_INSTALL_PATH/lib/netcdf/include 
+cc -fPIC -g -c mscal_query.c -o mscal_query.o -I$UCVM_INSTALL_PATH/lib/hdf5/include -I$UCVM_INSTALL_PATH/lib/netcdf/include 
 
-cc -g -c mscal.c -o mscal.o -I$UCVM_INSTALL_PATH/lib/hdf5/include -I$UCVM_INSTALL_PATH/lib/netcdf/include 
+cc -fPIC -g -c mscal.c -o mscal.o -I$UCVM_INSTALL_PATH/lib/hdf5/include -I$UCVM_INSTALL_PATH/lib/netcdf/include 
+cc -fPIC -g -c mscal_util.c -o mscal_util.o -I$UCVM_INSTALL_PATH/lib/hdf5/include -I$UCVM_INSTALL_PATH/lib/netcdf/include 
 
-ar rcs libmscal.a mscal.o cJSON.o um_netcdf.o
+ar rcs libmscal.a mscal.o cJSON.o mscal_util.o um_netcdf.o
 
 cc mscal_query.o -o mscal_query libmscal.a -I$UCVM_INSTALL_PATH/lib/hdf5/include -I$UCVM_INSTALL_PATH/lib/netcdf/include -L$UCVM_INSTALL_PATH/lib/hdf5/lib -lhdf5 -L$UCVM_INSTALL_PATH/lib/netcdf/lib -lnetcdf -lm
 

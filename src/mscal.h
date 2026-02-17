@@ -6,6 +6,8 @@
  * Delivers the MSCAL model 
  *
  */
+#ifndef MSCAL_H
+#define MSCAL_H
 
 // Includes
 #include <stdio.h>
@@ -13,6 +15,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <math.h>
+
+#include "mscal_util.h"
 
 /** Defines a return value of success */
 #define SUCCESS 0
@@ -22,6 +26,9 @@
 /* config string */
 #define MSCAL_CONFIG_MAX 1000
 #define MSCAL_DATASET_MAX 10
+
+extern int mscal_ucvm_debug;
+extern FILE *stderrfp;
 
 // Structures
 /** Defines a point (latitude, longitude, and depth) in WGS84 format */
@@ -57,49 +64,6 @@ Total elements: 15073884
 **/
 
 /** The MSCAL configuration structure. */
-typedef struct mscal_dataset_t {
-	/** tracking netcdf id **/
-        int ncid;
-
-	/** Number of x(lon) points */
-	int nx;
-	/** Number of y(lat) points */
-	int ny;
-	/** Number of z(dep) points */
-	int nz;
-
-	/** list of longitudes **/
-	float *longitudes;
-	/** list of latitudes **/
-	float *latitudes;
-	/** list of depths **/
-	float *depths;
-
-	int vp_varid;
-	int vs_varid;
-	int rho_varid;
-
-	int elems;
-	float *vp_buffer;
-	float *vs_buffer;
-	float *rho_buffer; 
-
-/* a cache of previous layer from cache_latlon_layer_float call */
-        int layer_cache_dep_idx;
-        float *layer_cache_vp_buffer;
-        float *layer_cache_vs_buffer;
-        float *layer_cache_rho_buffer;
-
-/* a cache of previous column from cache_depth_col_float call */
-        int col_cache_lat_idx;
-        int col_cache_lon_idx;
-        float *col_cache_vp_buffer;
-        float *col_cache_vs_buffer;
-        float *col_cache_rho_buffer;
-
-
-} mscal_dataset_t;
-
 typedef struct mscal_configuration_t {
 	/** The zone of UTM projection */
 	int utm_zone;
@@ -118,7 +82,7 @@ typedef struct mscal_configuration_t {
 
 typedef struct mscal_model_t {
         int dataset_cnt;
-        mscal_dataset_t datasets[MSCAL_DATASET_MAX];
+        mscal_dataset_t *datasets[MSCAL_DATASET_MAX];
 } mscal_model_t;
 
 
@@ -168,8 +132,11 @@ int mscal_version(char *ver, int len);
 int mscal_query(mscal_point_t *points, mscal_properties_t *data, int numpts);
 
 // Non-UCVM Helper Functions
-/** Reads the configuration file. */
+//
+/** Reads the configuration file and helper functions. */
 int mscal_read_configuration(char *file, mscal_configuration_t *config);
+int mscal_configuration_finalize(mscal_configuration_t *config);
+
 /** Prints out the error string. */
 void mscal_print_error(char *err);
 /** Retrieves the value at a specified grid point in the model. */
@@ -178,11 +145,15 @@ void mscal_read_properties(int x, int y, int z, mscal_properties_t *data);
 int mscal_read_model(mscal_configuration_t *config, mscal_model_t *model, char* dir);
 /** toggle debug flag **/
 void mscal_setdebug();
-/** free the allocated memory **/
-int mscal_configuration_finalize(mscal_configuration_t *config);
-/** free the allocated memory **/
+
+/** helper function for velocity_model **/
+int mscal_velocity_model_init(mscal_model_t *model);
 int mscal_velocity_model_finalize(mscal_model_t *model);
+
 /** parse JSON metadata blob per dataset **/
 int _setup_a_dataset(mscal_configuration_t *conf, char *blobstr);
+
 void _trimLast(char *str, char m);
 void _splitline(char* lptr, char key[], char value[]);
+
+#endif

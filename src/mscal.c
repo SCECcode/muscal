@@ -10,6 +10,7 @@
 #include <limits.h>
 #include "ucvm_model_dtypes.h"
 #include "mscal.h"
+#include "mscal_util.h"
 #include "um_netcdf.h"
 #include "cJSON.h"
 
@@ -57,12 +58,14 @@ int mscal_init(const char *dir, const char *label) {
     }
 
     // Initialize variables.
+    
     mscal_configuration = calloc(1, sizeof(mscal_configuration_t));
-    mscal_velocity_model = calloc(1, sizeof(mscal_model_t));
-
     mscal_config_string = calloc(MSCAL_CONFIG_MAX, sizeof(char));
     mscal_config_string[0]='\0';
     mscal_config_sz=0;
+
+    mscal_velocity_model = calloc(1, sizeof(mscal_model_t));
+    mscal_velocity_model_init(mscal_velocity_model);
 
     // Configuration file location.
     sprintf(configbuf, "%s/model/%s/data/config", dir, label);
@@ -88,8 +91,10 @@ int mscal_init(const char *dir, const char *label) {
     tempVal = mscal_read_model(mscal_configuration, mscal_velocity_model, mscal_data_directory);
 
     if (tempVal == SUCCESS) {
-//        fprintf(stderr, "WARNING: Could not load model into memory. Reading the model from the\n");
-//        fprintf(stderr, "hard disk may result in slow performance.\n");
+      if(mscal_ucvm_debug) {
+        fprintf(stderrfp, "WARNING: Could not load model into memory. Reading the model from the\n");
+        fprintf(stderrfp, "hard disk may result in slow performance.\n");
+      }
     } else if (tempVal == FAIL) {
         mscal_print_error("No model file was found to read from.");
         return FAIL;
@@ -114,12 +119,13 @@ int mscal_init(const char *dir, const char *label) {
  * @return SUCCESS or FAIL.
  */
 int mscal_query(mscal_point_t *points, mscal_properties_t *data, int numpoints) {
+
     int data_idx = 0;
     nc_type vtype=NC_FLOAT;
 
     /* iterate through the dataset to see where does the point fall into */
     /* for now assume there is only 1 dataset */
-    mscal_dataset_t *dataset=&(mscal_velocity_model->datasets[data_idx]);
+    mscal_dataset_t *dataset= mscal_velocity_model->datasets[data_idx];
 
     float *lon_list=dataset->longitudes;
     float *lat_list=dataset->latitudes;
@@ -128,11 +134,7 @@ int mscal_query(mscal_point_t *points, mscal_properties_t *data, int numpoints) 
     int ny=dataset->ny;
     int nz=dataset->nz;
 
-    // hold all the final result
-    float *vp_buffer=NULL;
-    float *vs_buffer=NULL;
-    float *rho_buffer=NULL;
-
+    // hold current working buffers
     float *tmp_vp_buffer=NULL;
     float *tmp_vs_buffer=NULL;
     float *tmp_rho_buffer=NULL;
@@ -140,9 +142,11 @@ int mscal_query(mscal_point_t *points, mscal_properties_t *data, int numpoints) 
     float lon_f;
     float lat_f;
     float dep_f;
+    
     int lon_idx, first_lon_idx;
     int lat_idx, first_lat_idx;
     int dep_idx, first_dep_idx;
+
     int same_lon_idx=1;
     int same_lat_idx=1;
     int same_dep_idx=1;
@@ -154,13 +158,6 @@ int mscal_query(mscal_point_t *points, mscal_properties_t *data, int numpoints) 
     int offset;
 
 // hold the result
-    vp_buffer = malloc(numpoints * sizeof(float));
-    if (!vp_buffer) { fprintf(stderr, "malloc failed\n");}
-    vs_buffer = malloc(numpoints * sizeof(float));
-    if (!vs_buffer) { fprintf(stderr, "malloc failed\n");}
-    rho_buffer = malloc(numpoints * sizeof(float));
-    if (!rho_buffer) { fprintf(stderr, "malloc failed\n");}
-
     dep_idx_buffer = malloc(numpoints * sizeof(size_t));
     if (!dep_idx_buffer) { fprintf(stderr, "malloc failed\n");}
     lat_idx_buffer = malloc(numpoints * sizeof(size_t));
@@ -168,7 +165,7 @@ int mscal_query(mscal_point_t *points, mscal_properties_t *data, int numpoints) 
     lon_idx_buffer = malloc(numpoints * sizeof(size_t));
     if (!lon_idx_buffer) { fprintf(stderr, "malloc failed\n");}
 
-// iterate through all the points and compose the buffers for all inex
+// iterate through all the points and compose the buffers for all index
     for(int i=0; i<numpoints; i++) {
         data[i].vp = -1;
         data[i].vs = -1;
@@ -185,6 +182,7 @@ if(mscal_ucvm_debug){ if(i<5) fprintf(stderrfp,"\nfirst %d, float lon/lat/dep = 
         lon_idx=find_buffer_idx((float *)lon_list,nx,lon_f);
         lat_idx=find_buffer_idx((float *)lat_list,ny,lat_f);
         dep_idx=find_buffer_idx((float *)dep_list,nz,dep_f);
+
 if(mscal_ucvm_debug){ if(i<5) fprintf(stderrfp,"----> depth list is %d  (40)%f (670)%f\n", nz, dep_list[40], dep_list[670]);}
 if(mscal_ucvm_debug){ if(i<5) fprintf(stderrfp,"    with idx lon/lat/dep = %d/%d/%d\n", lon_idx, lat_idx, dep_idx); }
 
@@ -197,19 +195,18 @@ if(mscal_ucvm_debug){ if(i<5) fprintf(stderrfp,"    with idx lon/lat/dep = %d/%d
         lon_idx_buffer[i]=lon_idx;
         lat_idx_buffer[i]=lat_idx;
 
-	if(dep_idx != first_dep_idx) same_dep_idx=0;
-	if(lon_idx != first_lon_idx) same_lon_idx=0;
-	if(lat_idx != first_lat_idx) same_lat_idx=0;
+     if(dep_idx != first_dep_idx) same_dep_idx=0;
+     if(lon_idx != first_lon_idx) same_lon_idx=0;
+     if(lat_idx != first_lat_idx) same_lat_idx=0;
     }
 
 // handle access 
-// if not TooBig, grab from in memory buffer one at a time
+// if not TooBig, grab from in-memory buffer one at a time
 // if tooBig, then collect up all the index list and make just one call and
 // retrieve and disperse the result back into data
 
-// it is not too big, extract from data buffers one at a time
     if(!TooBig) { 
-
+// it is not too big, extract from data buffers one at a time
         tmp_vp_buffer=dataset->vp_buffer;
         tmp_vs_buffer=dataset->vs_buffer;
         tmp_rho_buffer=dataset->rho_buffer;
@@ -224,137 +221,74 @@ if(mscal_ucvm_debug){ if(i<5) fprintf(stderrfp,"    with idx lon/lat/dep = %d/%d
 
 if(mscal_ucvm_debug) { fprintf(stderrfp,"\nTarget offset %d : idx lon/lat/dep = %d/%d/%d\n", offset,lon_idx, lat_idx, dep_idx); }
 
-            data[i].vp = ((float *)tmp_vp_buffer)[offset];
-            data[i].vs = ((float *)tmp_vs_buffer)[offset];
-            data[i].rho = ((float *)tmp_rho_buffer)[offset];
+            data[i].vp = tmp_vp_buffer[offset];
+            data[i].vs = tmp_vs_buffer[offset];
+            data[i].rho =tmp_rho_buffer[offset];
         }
-
     } else { 
+
+// special case, if numpoints < 5 just handle as random 
 
 // it is too big, extract data from external data file 
 // group netcdf access to 
 //   column based(same lat idx an same lon idx),
-//   layered(same depth idx) and random method
+//   or
+//   layer based(same depth idx) 
+//   or random method
 
-      if(mscal_ucvm_debug){ fprintf(stderrfp," What is indexing said, same %d %d %d\n", same_dep_idx, same_lon_idx, same_lat_idx); }
+// if same_lon_idx and same_lat_idx,
+// it is depth profile
+//    extract the whole column with dataset->nz for different set 
+//    and then extract data from buffer one at a time using dep_idx 
+        if(numpoints > 5  && same_lon_idx && same_lat_idx ) {
+		 
+          // grab a col from cache
+            mscal_cache_col_t *col=find_a_cache_col(dataset, first_lat_idx, first_lon_idx); 
+          
+            tmp_vp_buffer=col->col_vp_buffer;
+            tmp_vs_buffer=col->col_vs_buffer;
+            tmp_rho_buffer=col->col_rho_buffer;
 
-      // if same_lon_idx and same_lat_idx,
-      // it is depth profile
-      //    extract the whole column with dataset->nz for different set 
-      //    and then extract data from buffer one at a time using dep_idx 
-      if(same_lon_idx && same_lat_idx ) {
-        int yesfree=0;
-        if( (dataset->col_cache_lat_idx == same_lat_idx) && (dataset->col_cache_lon_idx == same_lon_idx)) {  
-            tmp_vp_buffer=dataset->col_cache_vp_buffer;
-            tmp_vs_buffer=dataset->col_cache_vs_buffer;
-            tmp_rho_buffer=dataset->col_cache_rho_buffer;
-            } else { // need to retrieve another set
-                tmp_vp_buffer = malloc(nz * sizeof(float));
-                if (!tmp_vp_buffer) { fprintf(stderr, "malloc failed\n");}
-                cache_depth_col_float(dataset->ncid, dataset->vp_varid,
-	  	        nz, first_lat_idx, first_lon_idx, tmp_vp_buffer);
-                tmp_vs_buffer = malloc(nz * sizeof(float));
-                if (!tmp_vs_buffer) { fprintf(stderr, "malloc failed\n");}
-                cache_depth_col_float(dataset->ncid, dataset->vs_varid,
-	  	        nz, first_lat_idx, first_lon_idx, tmp_vs_buffer);
-                tmp_rho_buffer = malloc(nz * sizeof(float));
-                if (!tmp_rho_buffer) { fprintf(stderr, "malloc failed\n");}
-                cache_depth_col_float(dataset->ncid, dataset->rho_varid,
-	  	        nz, first_lat_idx, first_lon_idx, tmp_rho_buffer);
-                yesfree=1;
-        }
+            for(int i=0; i<numpoints; i++) { 
+                offset=dep_idx_buffer[i];
 
-        for(int i=0; i<numpoints; i++) { 
-	    dep_idx=dep_idx_buffer[i];
-	    vp_buffer[i]=tmp_vp_buffer[dep_idx];
-	    vs_buffer[i]=tmp_vs_buffer[dep_idx];
-	    rho_buffer[i]=tmp_rho_buffer[dep_idx];
-	}
-        if(yesfree) {
-            if( dataset->col_cache_lat_idx != -1) {
-                free(dataset->col_cache_vp_buffer);
-                free(dataset->col_cache_vs_buffer);
-                free(dataset->col_cache_rho_buffer);
+                data[i].vp = tmp_vp_buffer[offset];
+                data[i].vs = tmp_vs_buffer[offset];
+                data[i].rho =tmp_rho_buffer[offset];
             }
-            dataset->col_cache_vp_buffer=tmp_vp_buffer;
-            dataset->col_cache_vs_buffer=tmp_vs_buffer;
-            dataset->col_cache_vs_buffer=tmp_rho_buffer;
-            dataset->col_cache_lat_idx=first_lat_idx;
-            dataset->col_cache_lon_idx=first_lon_idx;
-        }
 
-      // if just same_dep_idx, it is a horizontal slice,
-      // extract the whole layer using dataset->nx and dataset->ny
-      // and then extract data from buffer using lon_idx, and lat_idx
-      } else if (same_dep_idx) { 
-          int yesfree=0;
-          if(dataset->layer_cache_dep_idx == first_dep_idx) { // reues
-              tmp_vp_buffer=dataset->layer_cache_vp_buffer;
-              tmp_vs_buffer=dataset->layer_cache_vs_buffer;
-              tmp_rho_buffer=dataset->layer_cache_rho_buffer;
-              } else { // need to grab layer from data file
-if(mscal_ucvm_debug) { fprintf(stderrfp," -- calling get a layer with  %d\n",numpoints); }
-                  tmp_vp_buffer = malloc((nx*ny) * sizeof(float));
-                  tmp_vs_buffer = malloc((nx*ny) * sizeof(float));
-                  tmp_rho_buffer = malloc((nx*ny) * sizeof(float));
+// if just same_dep_idx, it is a horizontal slice,
+// extract the whole layer using dataset->nx and dataset->ny
+// and then extract data from buffer using lon_idx, and lat_idx
+        } else if (numpoints > 5 && same_dep_idx) { 
+          // grab a col from cache
+            mscal_cache_layer_t *layer=find_a_cache_layer(dataset, first_dep_idx);
+          
+            tmp_vp_buffer=layer->layer_vp_buffer;
+            tmp_vs_buffer=layer->layer_vs_buffer;
+            tmp_rho_buffer=layer->layer_rho_buffer;
 
-                  cache_latlon_layer_float(dataset->ncid, dataset->vp_varid,
-		      first_dep_idx, ny, nx, tmp_vp_buffer);
-                  cache_latlon_layer_float(dataset->ncid, dataset->vs_varid,
-		      first_dep_idx, ny, nx, tmp_vs_buffer);
-                  cache_latlon_layer_float(dataset->ncid, dataset->rho_varid,
-		      first_dep_idx, ny, nx, tmp_rho_buffer);
-                  yesfree=1;
-          }         
+            for(int i=0; i<numpoints; i++) { 
+                lat_idx=lat_idx_buffer[i];
+                lon_idx=lon_idx_buffer[i];
+                offset= (lat_idx * nx) + lon_idx;
 
-          for(int i=0; i<numpoints; i++) { 
-              lat_idx=lat_idx_buffer[i];
-	      lon_idx=lon_idx_buffer[i];
-	      offset= (lat_idx * nx) + lon_idx;
-
-	      vp_buffer[i]=tmp_vp_buffer[offset];
-	      vs_buffer[i]=tmp_vs_buffer[offset];
-	      rho_buffer[i]=tmp_rho_buffer[offset];
-          }
-          if(yesfree) {
-              if(dataset->layer_cache_dep_idx != -1) {
-                  free(dataset->layer_cache_vp_buffer);
-                  free(dataset->layer_cache_vs_buffer);
-                  free(dataset->layer_cache_rho_buffer);
-              }
-              dataset->layer_cache_dep_idx = first_dep_idx;
-              dataset->layer_cache_vp_buffer=tmp_vp_buffer;
-              dataset->layer_cache_vs_buffer=tmp_vs_buffer;
-              dataset->layer_cache_rho_buffer=tmp_rho_buffer;
-          }         
-      } else {  
-// it is so random and so just default to per location access
-        for(int i=0; i<numpoints; i++) { 
-           lat_idx=lat_idx_buffer[i];
-           lon_idx=lon_idx_buffer[i];
-           dep_idx=dep_idx_buffer[i];
-           vp_buffer[i]=get_nc_vara_float(dataset->ncid, dataset->vp_varid, dep_idx, lat_idx, lon_idx);
-           vs_buffer[i]=get_nc_vara_float(dataset->ncid, dataset->vs_varid, dep_idx, lat_idx, lon_idx);
-           rho_buffer[i]=get_nc_vara_float(dataset->ncid, dataset->rho_varid, dep_idx, lat_idx, lon_idx);
-        }
-      }
-
-
-// finally copy the data over
-      for(int i=0; i<numpoints; i++) {
-        data[i].vp = ((float *) vp_buffer)[i];
-        data[i].vs = ((float *) vs_buffer)[i];
-        data[i].rho = ((float *) rho_buffer)[i];
-      }
-
-      free(dep_idx_buffer);
-      free(lat_idx_buffer);
-      free(lon_idx_buffer);
-      free(vp_buffer);
-      free(vs_buffer);
-      free(rho_buffer);
+                data[i].vp = tmp_vp_buffer[offset];
+                data[i].vs = tmp_vs_buffer[offset];
+                data[i].rho =tmp_rho_buffer[offset];
+            }
+        } else {  
+// handle it as random and so just default to per location access
+            for(int i=0; i<numpoints; i++) { 
+                lat_idx=lat_idx_buffer[i];
+                lon_idx=lon_idx_buffer[i];
+                dep_idx=dep_idx_buffer[i];
+                data[i].vp=get_nc_vara_float(dataset->ncid, dataset->vp_varid, dep_idx, lat_idx, lon_idx);
+                data[i].vs=get_nc_vara_float(dataset->ncid, dataset->vs_varid, dep_idx, lat_idx, lon_idx);
+                data[i].rho=get_nc_vara_float(dataset->ncid, dataset->rho_varid, dep_idx, lat_idx, lon_idx);
+            }
+         }
     }
-
 
     return SUCCESS;
 }
@@ -450,7 +384,7 @@ int mscal_read_configuration(char *file, mscal_configuration_t *config) {
     while (fgets(line_holder, sizeof(line_holder), fp) != NULL) {
         if (line_holder[0] != '#' && line_holder[0] != ' ' && line_holder[0] != '\n') {
 
-	    _splitline(line_holder, key, value);
+         _splitline(line_holder, key, value);
 
             // Which variable are we editing?
             if (strcmp(key, "utm_zone") == 0) config->utm_zone = atoi(value);
@@ -459,11 +393,11 @@ int mscal_read_configuration(char *file, mscal_configuration_t *config) {
                 config->interpolation=0;
                 if (strcmp(value,"on") == 0) config->interpolation=1;
             }
-	    /* for each dataset, allocate a model dataset's block and fill in */ 
+         /* for each dataset, allocate a model dataset's block and fill in */ 
             if (strcmp(key, "data_file") == 0) { 
                 if( config->dataset_cnt < MSCAL_DATASET_MAX) {
-		    int rc=_setup_a_dataset(config,value);
-	            if(rc == 1 ) { config->dataset_cnt++; }
+              int rc=_setup_a_dataset(config,value);
+                 if(rc == 1 ) { config->dataset_cnt++; }
                     } else {
                         mscal_print_error("Exceeded dataset maximum limit.");
                 }
@@ -560,64 +494,10 @@ void _splitline(char* lptr, char key[], char value[]) {
 int mscal_read_model(mscal_configuration_t *config, mscal_model_t *model, char *datadir) {
 
     int max_idx=model->dataset_cnt; // how many datasets are there
-    size_t nelems= 0;
-    nc_type vtype;
-
-
-    char filepath[256];
     for(int i=0; i<max_idx;i++) { 
-        mscal_dataset_t *data= &(model->datasets[i]);
-
-        data->vp_buffer=NULL;
-        data->vs_buffer=NULL;
-        data->rho_buffer=NULL;
-
-        /* find the netcdf data file, no need to save it */
-        sprintf(filepath, "%s/%s", datadir, config->dataset_files[i]);
-	if(mscal_ucvm_debug) fprintf(stderrfp," data file ..%s\n", filepath);
-
-        /* setup ncid */
-        data->ncid=open_nc(filepath);
-  
-        /* setup nx/ny/nz and void ptrs */
-        data->longitudes=(float *) get_nc_buffer(data->ncid, "longitude", filepath, &vtype, &nelems, 1);
-        data->nx=nelems;
-        if(vtype != NC_FLOAT) { fprintf(stderr,"BADDD.. vtype panic"); }
-
-        data->latitudes=(float *) get_nc_buffer(data->ncid, "latitude", filepath, &vtype, &nelems, 1);
-        data->ny=nelems;
-        if(vtype != NC_FLOAT) { fprintf(stderr,"BADDD.. vtype panic"); }
-
-        data->depths=(float *) get_nc_buffer(data->ncid, "depth", filepath, &vtype, &nelems, 1);
-        data->nz=nelems;
-        if(vtype != NC_FLOAT) { fprintf(stderr,"BADDD.. vtype panic"); }
-
-	/* Get variable ID by name */
-        data->vp_varid=get_nc_varid(data->ncid,"vp",filepath);
-        data->vs_varid=get_nc_varid(data->ncid,"vs",filepath);
-        data->rho_varid=get_nc_varid(data->ncid,"rho",filepath);
-
-        /* load the vp/vs/rho in memory  TODO: figure what happen if too big */
-        if(!TooBig) {
-          data->vp_buffer=get_nc_buffer(data->ncid, "vp", filepath, &vtype, &nelems, 3);
-          if(vtype != NC_FLOAT) { fprintf(stderr,"BADDD.. vtype panic"); }
-          if(data->vp_buffer == 0) { fprintf(stderr,"PANIC malloc vs\n"); return FAIL; }
-	  data->elems=nelems;
-
-          data->vs_buffer=get_nc_buffer(data->ncid, "vs", filepath, &vtype, &nelems, 3);
-          if(vtype != NC_FLOAT) { fprintf(stderr,"BADDD.. vtype panic"); }
-          if(data->vs_buffer == 0) { fprintf(stderr,"PANIC malloc vs\n"); return FAIL; }
-          if(data->elems != nelems) { fprintf(stderr,"BADDD.. nelems panic"); }
-
-          data->rho_buffer=get_nc_buffer(data->ncid, "rho", filepath, &vtype, &nelems, 3);
-          if(vtype != NC_FLOAT) { fprintf(stderr,"BADDD.. vtype panic"); }
-          if(data->rho_buffer == 0) { fprintf(stderr,"PANIC malloc rho\n");  return FAIL; }
-          if(data->elems != nelems) { fprintf(stderr,"BADDD.. nelems panic"); }
-        }
-        data->layer_cache_dep_idx=-1;
-        data->col_cache_lat_idx=-1;
-        data->col_cache_lon_idx=-1;
-
+        mscal_dataset_t *data=make_a_mscal_dataset(datadir, config->dataset_files[i], TooBig); 
+// put into the velocity model
+        model->datasets[i]=data;
     }
     return SUCCESS;
 }
@@ -630,33 +510,37 @@ int mscal_read_model(mscal_configuration_t *config, mscal_model_t *model, char *
 int mscal_configuration_finalize(mscal_configuration_t *config) {
     int max_idx=config->dataset_cnt; // how many datasets are there
     for(int i=0; i<max_idx;i++) { 
-	free(config->dataset_labels[i]);  
-	free(config->dataset_files[i]);  
+        free(config->dataset_labels[i]);  
+        free(config->dataset_files[i]);  
     }
     free(config);
     return SUCCESS;
 }
 
 /**
- * Called to clear out the allocated memory 
+ * Called to clear out the allocated memory for model datasets 
  *
  * @param 
  */
+
 int mscal_velocity_model_finalize(mscal_model_t *model) {
     int max_idx=model->dataset_cnt; // how many datasets are there
     for(int i=0; i<max_idx; i++) {
-        mscal_dataset_t *data= &(model->datasets[i]);
-        free(data->depths);
-        free(data->latitudes);
-        free(data->longitudes);
-	free(data->vp_buffer);
-	free(data->vs_buffer);
-	free(data->rho_buffer);
-	nc_close(data->ncid);
+        mscal_dataset_t *data= model->datasets[i];
+        if(data != NULL) {
+          free_mscal_dataset(data);
+        }
     }
-    free(model);
     return SUCCESS;
 }
+int mscal_velocity_model_init(mscal_model_t *model) {
+    model->dataset_cnt=0;
+    for(int i=0; i<MSCAL_DATASET_MAX; i++) {
+        model->datasets[i]=NULL;
+    }
+    return SUCCESS;
+}
+
 
 /**
  * Prints the error string provided.

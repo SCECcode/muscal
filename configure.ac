@@ -20,7 +20,6 @@ AC_PROG_INSTALL
 AC_PROG_MKDIR_P
 AC_PROG_LN_S
 
-
 dnl --- begin: add libtool and --enable-shared handling ---
 # initialize libtool (provides LT_INIT and shared/static helpers)
 # If libtool is not available, autoreconf will tell you.
@@ -93,7 +92,7 @@ AC_OUTPUT
 
 AM_CONDITIONAL([BUILD_SHARED_LIBRARY], [test "$enable_shared" = yes])
 if test "$enable_shared" = yes; then
-  AC_MSG_NOTICE([Building shared libraries. UCVM must be built with shared libraries for plugins to work.])
+  AC_MSG_NOTICE([Building shared libraries. Shared libraries enabled.])
 else
   AC_MSG_WARN([Building static libraries. Shared libraries are not enabled.])
 fi
