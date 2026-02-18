@@ -120,6 +120,8 @@ int mscal_init(const char *dir, const char *label) {
  */
 int mscal_query(mscal_point_t *points, mscal_properties_t *data, int numpoints) {
 
+if(mscal_ucvm_debug){ fprintf(stderrfp,"\ncalling mscal_query with %d numpoints\n",numpoints); }
+
     int data_idx = 0;
     nc_type vtype=NC_FLOAT;
 
@@ -177,14 +179,14 @@ int mscal_query(mscal_point_t *points, mscal_properties_t *data, int numpoints) 
         lat_f=points[i].latitude;
         dep_f=points[i].depth;
 
-if(mscal_ucvm_debug){ if(i<5) fprintf(stderrfp,"\nfirst %d, float lon/lat/dep = %f/%f/%f\n", i, lon_f, lat_f, dep_f); }
+//if(mscal_ucvm_debug){ if(i<5) fprintf(stderrfp,"\nfirst %d, float lon/lat/dep = %f/%f/%f\n", i, lon_f, lat_f, dep_f); }
 
         lon_idx=find_buffer_idx((float *)lon_list,nx,lon_f);
         lat_idx=find_buffer_idx((float *)lat_list,ny,lat_f);
         dep_idx=find_buffer_idx((float *)dep_list,nz,dep_f);
 
-if(mscal_ucvm_debug){ if(i<5) fprintf(stderrfp,"----> depth list is %d  (40)%f (670)%f\n", nz, dep_list[40], dep_list[670]);}
-if(mscal_ucvm_debug){ if(i<5) fprintf(stderrfp,"    with idx lon/lat/dep = %d/%d/%d\n", lon_idx, lat_idx, dep_idx); }
+//if(mscal_ucvm_debug){ if(i<5) fprintf(stderrfp,"----> depth list is %d  (40)%f (670)%f\n", nz, dep_list[40], dep_list[670]);}
+//if(mscal_ucvm_debug){ if(i<5) fprintf(stderrfp,"    with idx lon/lat/dep = %d/%d/%d\n", lon_idx, lat_idx, dep_idx); }
 
         if(i==0) {
             first_dep_idx=dep_idx;
@@ -206,6 +208,8 @@ if(mscal_ucvm_debug){ if(i<5) fprintf(stderrfp,"    with idx lon/lat/dep = %d/%d
 // retrieve and disperse the result back into data
 
     if(!TooBig) { 
+if(mscal_ucvm_debug){ fprintf(stderrfp,">> In-Memory access \n"); }
+
 // it is not too big, extract from data buffers one at a time
         tmp_vp_buffer=dataset->vp_buffer;
         tmp_vs_buffer=dataset->vs_buffer;
@@ -244,6 +248,7 @@ if(mscal_ucvm_debug) { fprintf(stderrfp,"\nTarget offset %d : idx lon/lat/dep = 
 		 
           // grab a col from cache
             mscal_cache_col_t *col=find_a_cache_col(dataset, first_lat_idx, first_lon_idx); 
+if(mscal_ucvm_debug){ fprintf(stderrfp,">> Using Col cache - %d\n", dataset->col_cache_cnt); }
           
             tmp_vp_buffer=col->col_vp_buffer;
             tmp_vs_buffer=col->col_vs_buffer;
@@ -263,6 +268,7 @@ if(mscal_ucvm_debug) { fprintf(stderrfp,"\nTarget offset %d : idx lon/lat/dep = 
         } else if (numpoints > 5 && same_dep_idx) { 
           // grab a col from cache
             mscal_cache_layer_t *layer=find_a_cache_layer(dataset, first_dep_idx);
+if(mscal_ucvm_debug){ fprintf(stderrfp,">> Using Layer cache - %d\n", dataset->layer_cache_cnt); }
           
             tmp_vp_buffer=layer->layer_vp_buffer;
             tmp_vs_buffer=layer->layer_vs_buffer;
@@ -279,6 +285,8 @@ if(mscal_ucvm_debug) { fprintf(stderrfp,"\nTarget offset %d : idx lon/lat/dep = 
             }
         } else {  
 // handle it as random and so just default to per location access
+//
+if(mscal_ucvm_debug){ fprintf(stderrfp,">> Using random call \n"); }
             for(int i=0; i<numpoints; i++) { 
                 lat_idx=lat_idx_buffer[i];
                 lon_idx=lon_idx_buffer[i];
