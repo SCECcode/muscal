@@ -8,8 +8,13 @@
 
 #define MSCAL_DATASET_MAX 10
 
-#define MSCAL_CACHE_LAYER_MAX 10
+#define MSCAL_CACHE_LAYER_MAX 20
 #define MSCAL_CACHE_COL_MAX 10
+
+typedef struct bucket_t{
+    size_t value;   // the unique index
+    size_t count;   // frequency
+} bucket_t;
 
 typedef struct mscal_cache_layer_t {
      int cache_layer_dep_idx;
@@ -77,6 +82,8 @@ mscal_cache_col_t *find_a_cache_col(mscal_dataset_t *dataset, int target_lat_idx
 void free_a_cache_col(mscal_cache_col_t *col);
 mscal_cache_layer_t *find_a_cache_layer(mscal_dataset_t *dataset, int target_dep_idx);
 void free_a_cache_layer(mscal_cache_layer_t *layer);
+
+int bucket_an_array(size_t *idx_arr, size_t n);
 
 #endif
 

@@ -223,3 +223,87 @@ void free_a_cache_layer(mscal_cache_layer_t *layer) {
    free(layer);
 }
 
+/*** bucket sort the layer index ***/
+
+static int cmp_size_t(const void *a, const void *b) {
+    size_t av = *(const size_t *)a;
+    size_t bv = *(const size_t *)b;
+    return (av > bv) - (av < bv);
+}
+
+/**
+ * Groups identical values without modifying the input array.
+ *
+ * @param arr  pointer to input values (not modified)
+ * @param n    number of elements in arr
+ * @param out_bucket_count  output: number of unique buckets
+ * @return dynamically-allocated array of Bucket (size = *out_bucket_count), or NULL on error
+ *
+ * Notes:
+ *   - On success with n==0: returns NULL and sets *out_bucket_count = 0
+ *   - Caller must free() the returned pointer.
+ */
+bucket_t *bucketize_unique_counts(const size_t *arr, size_t n, size_t *out_bucket_count) {
+    if (!out_bucket_count) return NULL;
+    *out_bucket_count = 0;
+
+    if (!arr || n == 0) {
+        return NULL; // nothing to do
+    }
+
+    // 1) Copy input (to keep original unmodified)
+    size_t *copy = malloc(n * sizeof(*copy));
+    if (!copy) return NULL;
+    memcpy(copy, arr, n * sizeof(*copy));
+
+    // 2) Sort the copy
+    qsort(copy, n, sizeof(*copy), cmp_size_t);
+
+    // 3) Allocate worst-case buckets (all values unique)
+    bucket_t *buckets = malloc(n * sizeof(*buckets));
+    if (!buckets) {
+        free(copy);
+        return NULL;
+    }
+
+    // 4) Scan sorted copy to form (value, count) buckets
+    size_t bcount = 0;
+    size_t i = 0;
+    while (i < n) {
+        size_t v = copy[i];
+        size_t j = i + 1;
+        while (j < n && copy[j] == v) j++;
+
+        buckets[bcount].value = v;
+        buckets[bcount].count = j - i;
+        bcount++;
+
+        i = j;
+    }
+
+    // 5) (Optional) shrink to fit
+    bucket_t *shrunk = realloc(buckets, bcount * sizeof(*buckets));
+    if (shrunk) buckets = shrunk;
+
+    free(copy);
+    *out_bucket_count = bcount;
+    return buckets;
+}
+
+int bucket_an_array(size_t *idx_arr, size_t n) { 
+
+    size_t bucket_count = 0;
+    bucket_t *buckets = bucketize_unique_counts(idx_arr, n, &bucket_count);
+    if (!buckets && bucket_count != 0) {
+        fprintf(stderr, "Error creating buckets\n");
+    }
+
+    if(mscal_ucvm_debug) { fprintf(stderrfp, "Unique buckets: %zu\n", bucket_count); }
+    for (size_t i = 0; i < bucket_count; ++i) {
+        if(mscal_ucvm_debug) { fprintf(stderrfp, "value=%zu count=%zu\n", buckets[i].value, buckets[i].count); }
+    }
+
+    free(buckets);
+    return bucket_count;
+}
+

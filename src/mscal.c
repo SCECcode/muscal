@@ -14,7 +14,7 @@
 #include "um_netcdf.h"
 #include "cJSON.h"
 
-int mscal_ucvm_debug=0;
+int mscal_ucvm_debug=1;
 FILE *stderrfp=NULL;
 
 int TooBig=1;
@@ -197,10 +197,12 @@ if(mscal_ucvm_debug){ fprintf(stderrfp,"\ncalling mscal_query with %d numpoints\
         lon_idx_buffer[i]=lon_idx;
         lat_idx_buffer[i]=lat_idx;
 
-     if(dep_idx != first_dep_idx) same_dep_idx=0;
-     if(lon_idx != first_lon_idx) same_lon_idx=0;
-     if(lat_idx != first_lat_idx) same_lat_idx=0;
+        if(dep_idx != first_dep_idx) same_dep_idx=0;
+        if(lon_idx != first_lon_idx) same_lon_idx=0;
+        if(lat_idx != first_lat_idx) same_lat_idx=0;
     }
+
+    int bucket_cnt=bucket_an_array(dep_idx_buffer, numpoints);
 
 // handle access 
 // if not TooBig, grab from in-memory buffer one at a time
@@ -284,16 +286,43 @@ if(mscal_ucvm_debug){ fprintf(stderrfp,">> Using Layer cache - %d\n", dataset->l
                 data[i].rho =tmp_rho_buffer[offset];
             }
         } else {  
+// a very special case,
+            if(bucket_cnt < MSCAL_CACHE_LAYER_MAX) {	    
+if(mscal_ucvm_debug){ fprintf(stderrfp,">> Using special cache layer\n"); }
+if(mscal_ucvm_debug){ fprintf(stderrfp," BUCKET count is %d \n", bucket_cnt); }
+                int last_idx=-1;
+		mscal_cache_layer_t *last_layer=NULL;
+		mscal_cache_layer_t *layer=NULL;
+                for(int i=0; i<numpoints; i++) { 
+                    lat_idx=lat_idx_buffer[i];
+                    lon_idx=lon_idx_buffer[i];
+                    dep_idx=dep_idx_buffer[i];
+                    if(layer == NULL) {
+		        layer=find_a_cache_layer(dataset, dep_idx);
+                    } else if (last_idx == dep_idx) { 
+                        layer = last_layer;
+                    } else { // there is a layer switch
+		        layer=find_a_cache_layer(dataset, dep_idx);
+                    }
+		    last_layer = layer;
+		    last_idx=dep_idx;
+
+                    offset= (lat_idx * nx) + lon_idx;
+                    data[i].vp = (layer->layer_vp_buffer)[offset];
+                    data[i].vs = (layer->layer_vs_buffer)[offset];
+                    data[i].rho = (layer->layer_rho_buffer)[offset];
+	        }
+                } else {
 // handle it as random and so just default to per location access
-//
 if(mscal_ucvm_debug){ fprintf(stderrfp,">> Using random call \n"); }
-            for(int i=0; i<numpoints; i++) { 
-                lat_idx=lat_idx_buffer[i];
-                lon_idx=lon_idx_buffer[i];
-                dep_idx=dep_idx_buffer[i];
-                data[i].vp=get_nc_vara_float(dataset->ncid, dataset->vp_varid, dep_idx, lat_idx, lon_idx);
-                data[i].vs=get_nc_vara_float(dataset->ncid, dataset->vs_varid, dep_idx, lat_idx, lon_idx);
-                data[i].rho=get_nc_vara_float(dataset->ncid, dataset->rho_varid, dep_idx, lat_idx, lon_idx);
+                    for(int i=0; i<numpoints; i++) { 
+                        lat_idx=lat_idx_buffer[i];
+                        lon_idx=lon_idx_buffer[i];
+                        dep_idx=dep_idx_buffer[i];
+                        data[i].vp=get_nc_vara_float(dataset->ncid, dataset->vp_varid, dep_idx, lat_idx, lon_idx);
+                        data[i].vs=get_nc_vara_float(dataset->ncid, dataset->vs_varid, dep_idx, lat_idx, lon_idx);
+                        data[i].rho=get_nc_vara_float(dataset->ncid, dataset->rho_varid, dep_idx, lat_idx, lon_idx);
+	                }
             }
          }
     }
