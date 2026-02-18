@@ -123,9 +123,11 @@ mscal_cache_col_t *_add_a_cache_col(mscal_dataset_t *dataset, int target_lat_idx
 }
 
 mscal_cache_col_t *find_a_cache_col(mscal_dataset_t *dataset, int target_lat_idx, int target_lon_idx) {
-   int max= dataset->col_cache_cnt; 
+
+   int cnt= dataset->col_cache_cnt; 
    mscal_cache_col_t *col;
-   for(int i=0; i< max; i++) {
+
+   for(int i=0; i< cnt; i++) {
      col=dataset->col_cache[i];
      if((col->cache_col_lat_idx == target_lat_idx) &&
 		      (col->cache_col_lon_idx == target_lon_idx) ) {
@@ -137,15 +139,17 @@ mscal_cache_col_t *find_a_cache_col(mscal_dataset_t *dataset, int target_lat_idx
    col=_add_a_cache_col(dataset, target_lat_idx, target_lon_idx);
     
    // find a space to put in (in case it is full)
-   int idx= ((max+1) % MSCAL_CACHE_COL_MAX); // next index to use
-   if(dataset->col_cache[idx]!= NULL) {
-       free_a_cache_col(dataset->col_cache[idx]);
-       dataset->col_cache[idx]=col; 
-       dataset->col_cache_cnt=max; // no change
+   if( cnt < MSCAL_CACHE_COL_MAX) {
+       dataset->col_cache[cnt]=col;
+       dataset->col_cache_cnt=cnt+1;
        } else {
-          dataset->col_cache[max]=col; 
-          dataset->col_cache_cnt=max+1; 
+// else has to free one out
+         int use_idx=(cnt+1) % MSCAL_CACHE_COL_MAX;
+         free_a_cache_col(dataset->col_cache[use_idx]);
+         dataset->col_cache[use_idx]=col;
+
    }
+
    return col;     
 }
 
@@ -184,10 +188,10 @@ mscal_cache_layer_t *_add_a_cache_layer(mscal_dataset_t *dataset, int target_dep
 
 mscal_cache_layer_t *find_a_cache_layer(mscal_dataset_t *dataset, int target_dep_idx) {
 
-   int max= dataset->layer_cache_cnt;
-
+   int cnt= dataset->layer_cache_cnt;
    mscal_cache_layer_t *layer;
-   for(int i=0; i< max; i++) {
+
+   for(int i=0; i< cnt; i++) {
      layer=dataset->layer_cache[i];
      if((layer->cache_layer_dep_idx == target_dep_idx) ) {
         // found it
@@ -198,14 +202,14 @@ mscal_cache_layer_t *find_a_cache_layer(mscal_dataset_t *dataset, int target_dep
    layer=_add_a_cache_layer(dataset, target_dep_idx);
 
    // find a space to put in (in case it is full)
-   int idx= ((max+1) % MSCAL_CACHE_LAYER_MAX); // next index to use
-   if(dataset->layer_cache[idx]!= NULL) {
-       free_a_cache_layer(dataset->layer_cache[idx]);
-       dataset->layer_cache[idx]=layer;
-       dataset->layer_cache_cnt=max; // no change
+   if( cnt < MSCAL_CACHE_LAYER_MAX) {
+       dataset->layer_cache[cnt]=layer;
+       dataset->layer_cache_cnt=cnt+1;
        } else {
-          dataset->layer_cache[max]=layer;
-          dataset->layer_cache_cnt=max+1; 
+// else has to free one out
+         int use_idx=(cnt+1) % MSCAL_CACHE_LAYER_MAX;
+         free_a_cache_layer(dataset->layer_cache[use_idx]);
+         dataset->layer_cache[use_idx]=layer;
    }
    return layer;     
 }
