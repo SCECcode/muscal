@@ -14,10 +14,11 @@
 #include "um_netcdf.h"
 #include "cJSON.h"
 
-int mscal_ucvm_debug=1;
+int mscal_ucvm_debug=0;
 FILE *stderrfp=NULL;
 
 int TooBig=1;
+int _ON=0;
 
 /** The config of the model */
 char *mscal_config_string=NULL;
@@ -179,14 +180,13 @@ if(mscal_ucvm_debug){ fprintf(stderrfp,"\ncalling mscal_query with %d numpoints\
         lat_f=points[i].latitude;
         dep_f=points[i].depth;
 
-//if(mscal_ucvm_debug){ if(i<5) fprintf(stderrfp,"\nfirst %d, float lon/lat/dep = %f/%f/%f\n", i, lon_f, lat_f, dep_f); }
+if(mscal_ucvm_debug){ if(i<5) fprintf(stderrfp,"\nfirst %d, float lon/lat/dep = %f/%f/%f\n", i, lon_f, lat_f, dep_f); }
 
         lon_idx=find_buffer_idx((float *)lon_list,nx,lon_f);
         lat_idx=find_buffer_idx((float *)lat_list,ny,lat_f);
         dep_idx=find_buffer_idx((float *)dep_list,nz,dep_f);
 
-//if(mscal_ucvm_debug){ if(i<5) fprintf(stderrfp,"----> depth list is %d  (40)%f (670)%f\n", nz, dep_list[40], dep_list[670]);}
-//if(mscal_ucvm_debug){ if(i<5) fprintf(stderrfp,"    with idx lon/lat/dep = %d/%d/%d\n", lon_idx, lat_idx, dep_idx); }
+if(mscal_ucvm_debug){ if(i<5) fprintf(stderrfp,"    with idx lon/lat/dep = %d/%d/%d\n", lon_idx, lat_idx, dep_idx); }
 
         if(i==0) {
             first_dep_idx=dep_idx;
@@ -287,7 +287,7 @@ if(mscal_ucvm_debug){ fprintf(stderrfp,">> Using Layer cache - %d\n", dataset->l
             }
         } else {  
 // a very special case,
-            if(bucket_cnt < MSCAL_CACHE_LAYER_MAX) {	    
+            if( _ON && bucket_cnt < MSCAL_CACHE_LAYER_MAX) {	    
 if(mscal_ucvm_debug){ fprintf(stderrfp,">> Using special cache layer\n"); }
 if(mscal_ucvm_debug){ fprintf(stderrfp," BUCKET count is %d \n", bucket_cnt); }
                 int last_idx=-1;

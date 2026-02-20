@@ -2,14 +2,6 @@
          mscal_util.c
 **/
 
-/*
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <math.h>
-*/
-
 #include "ucvm_model_dtypes.h"
 #include "mscal.h"
 #include "um_netcdf.h"
@@ -34,12 +26,30 @@ mscal_dataset_t *make_a_mscal_dataset(char *datadir, char *datafile, int tooBig)
 /* setup nx/ny/nz and void ptrs */
     data->longitudes=(float *) get_nc_buffer(data->ncid, "longitude", filepath, &vtype, &nelems, 1);
     data->nx=nelems;
+    if(mscal_ucvm_debug) {
+        fprintf(stderrfp, "  Longitudes: %d\n", nelems);
+        for(int i=0;i<nelems; i++) {
+            fprintf(stderrfp, "%d  %f\n", i, data->longitudes[i]);
+       	}
+    }
 
     data->latitudes=(float *) get_nc_buffer(data->ncid, "latitude", filepath, &vtype, &nelems, 1);
     data->ny=nelems;
+    if(mscal_ucvm_debug) {
+        fprintf(stderrfp, "  Latitude: %d\n", nelems);
+        for(int i=0;i<nelems; i++) {
+            fprintf(stderrfp, "%d  %f\n", i, data->latitudes[i]);
+       	}
+    }
 
     data->depths=(float *) get_nc_buffer(data->ncid, "depth", filepath, &vtype, &nelems, 1);
     data->nz=nelems;
+    if(mscal_ucvm_debug) {
+        fprintf(stderrfp, "  Depths: %d\n", nelems);
+        for(int i=0;i<nelems; i++) {
+            fprintf(stderrfp, "%d  %f\n", i, data->depths[i]);
+       	}
+    }
 
 /* Get variable ID by name */
     data->vp_varid=get_nc_varid(data->ncid,"vp",filepath);
@@ -169,6 +179,7 @@ mscal_cache_layer_t *_add_a_cache_layer(mscal_dataset_t *dataset, int target_dep
     int nx=dataset->nx;
     int ny=dataset->ny;
 
+    if(mscal_ucvm_debug) { fprintf(stderrfp, "  Loading a new layer: %zu\n", target_dep_idx); }
     mscal_cache_layer_t *layer= (mscal_cache_layer_t *) malloc(sizeof(mscal_cache_layer_t));
 
     layer->cache_layer_dep_idx=target_dep_idx;
