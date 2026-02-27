@@ -6,14 +6,18 @@
 ![GitHub repo size](https://img.shields.io/github/repo-size/sceccode/mscal)
 [![mscal-ucvm-ci Actions Status](https://github.com/SCECcode/mscal/workflows/mscal-ucvm-ci/badge.svg)](https://github.com/SCECcode/mscal/actions)
 
-The Multi-Scale CALifornia (MSCAL) statewide velocity model provides a high-resolution, integrated
-description of seismic structure across the state. Built upon the CANVAS base model (Doody et al., 2023),
-MSCAL incorporates diverse regional and local velocity datasets into a unified structure, capturing 
-features ranging from broad crustal-mantle structures to fine-scale local anomalies such as sedimentary 
-basins. To ensure performance, the model underwent a data-informed refinement process guided by simulations
-of small validation events. A key feature of MSCAL is the inclusion of a spatially-optimized near-surface
-low-velocity taper (LVT), specifically designed to better represent under-resolved shallow structures and 
-improve the accuracy of ground-motion predictions.
+The Multi-Scale CALifornia (MSCAL) statewide Vp and Vs velocity models provide 
+high-quality integrated description of seismic structures across the state. 
+Starting with the CANVAS base model (Doody et al., 2023), MSCAL incorporates 
+multiple regional and local velocity datasets into a unified structure, capturing 
+features ranging from broad crustal-mantle structures to fine-scale local 
+anomalies such as sedimentary basins.
+ 
+To ensure quality, the merged multi-scale models underwent a data-informed refinement
+process guided by simulations of small validation events. A key feature of MSCAL is 
+the inclusion of a locally optimized near-surface low-velocity taper (LVT), specifically 
+designed to better represent under-resolved shallow structures and improve the accuracy 
+of ground-motion predictions.
 
 ## Installation
 
