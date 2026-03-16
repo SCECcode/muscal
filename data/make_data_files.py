@@ -92,8 +92,8 @@ def main():
     if not os.path.isdir(mdir) :
         subprocess.check_call(["mkdir", "-p", mdir])
 
-    fname=mdir+"/model_MSCAL_CANVAS_dll0.01_dz50_cmpd.nc"
-    tarfile=mdir+"/model_MSCAL_CANVAS_dll0.01_dz50_cmpd.nc.tar.gz"
+    fname=mdir+"/model_MSCAL_CANVAS_dll0.01_vardz_cmpd.nc"
+    tarfile=mdir+"/model_MSCAL_CANVAS_dll0.01_vardz_cmpd.nc.nc.tar.gz"
     if not os.path.isfile(fname) :
       print("download ", tarfile)
       url = path + "/" + tarfile 
