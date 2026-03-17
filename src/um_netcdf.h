@@ -25,6 +25,7 @@ int get_nc_var(int ncid, int varid, nc_type *vtype, int *ndims, int **dimids, si
 
 int print_nc_buffer_offset(nc_type vtype, int offset, void *buffer);
 void *get_nc_buffer(int ncid, char *varname, const char *path, nc_type *vtype, size_t *nelems, int e_dimlens);
+void *get_nc_float_buffer(int ncid, char *varname, const char *path, nc_type *vtype, size_t *nelems, int e_dimlens);
 
 int find_buffer_idx(float *buffer, size_t nelems, float target);
 float get_nc_vara_float(int ncid, int varid, int dep_idx, int lat_idx, int lon_idx);

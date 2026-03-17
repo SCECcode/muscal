@@ -24,7 +24,7 @@ mscal_dataset_t *make_a_mscal_dataset(char *datadir, char *datafile, int tooBig)
     data->ncid=open_nc(filepath);
   
 /* setup nx/ny/nz and void ptrs */
-    data->longitudes=(float *) get_nc_buffer(data->ncid, "longitude", filepath, &vtype, &nelems, 1);
+    data->longitudes=(float *) get_nc_float_buffer(data->ncid, "longitude", filepath, &vtype, &nelems, 1);
     data->nx=nelems;
     if(mscal_ucvm_debug) {
         fprintf(stderrfp, "  Longitudes: %d\n", nelems);
@@ -33,7 +33,7 @@ mscal_dataset_t *make_a_mscal_dataset(char *datadir, char *datafile, int tooBig)
        	}
     }
 
-    data->latitudes=(float *) get_nc_buffer(data->ncid, "latitude", filepath, &vtype, &nelems, 1);
+    data->latitudes=(float *) get_nc_float_buffer(data->ncid, "latitude", filepath, &vtype, &nelems, 1);
     data->ny=nelems;
     if(mscal_ucvm_debug) {
         fprintf(stderrfp, "  Latitude: %d\n", nelems);
@@ -42,7 +42,7 @@ mscal_dataset_t *make_a_mscal_dataset(char *datadir, char *datafile, int tooBig)
        	}
     }
 
-    data->depths=(float *) get_nc_buffer(data->ncid, "depth", filepath, &vtype, &nelems, 1);
+    data->depths=(float *) get_nc_float_buffer(data->ncid, "depth", filepath, &vtype, &nelems, 1);
     data->nz=nelems;
     if(mscal_ucvm_debug) {
         fprintf(stderrfp, "  Depths: %d\n", nelems);
