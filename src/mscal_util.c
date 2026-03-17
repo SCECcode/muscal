@@ -69,9 +69,9 @@ mscal_dataset_t *make_a_mscal_dataset(char *datadir, char *datafile, int tooBig)
         data->vs_buffer = (float *)malloc(total * sizeof(float));
         data->rho_buffer = (float *)malloc(total * sizeof(float));
 
-        data->vp_buffer=get_nc_buffer(data->ncid, "vp", filepath, &vtype, &nelems, 3);
-        data->vs_buffer=get_nc_buffer(data->ncid, "vs", filepath, &vtype, &nelems, 3);
-        data->rho_buffer=get_nc_buffer(data->ncid, "rho", filepath, &vtype, &nelems, 3);
+        data->vp_buffer=get_nc_float_buffer(data->ncid, "vp", filepath, &vtype, &nelems, 3);
+        data->vs_buffer=get_nc_float_buffer(data->ncid, "vs", filepath, &vtype, &nelems, 3);
+        data->rho_buffer=get_nc_float_buffer(data->ncid, "rho", filepath, &vtype, &nelems, 3);
 
 	data->elems=total;
         data->in_memory=1;
