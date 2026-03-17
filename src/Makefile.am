@@ -1,13 +1,13 @@
 # Autoconf/automake file
 
-objects = um_netcdf.o mscal_util.o cJSON.o
+objects = um_netcdf.o muscal_util.o cJSON.o
 
 # General compiler/linker flags
 AM_CFLAGS = ${CFLAGS} ${CPPFLAGS} -I$(prefix)/include
 AM_LDFLAGS = ${LDFLAGS} -L$(prefix)/lib ${LIBS} -lm
 
 
-TARGETS = mscal_query libmscal.a libmscal.so
+TARGETS = muscal_query libmuscal.a libmuscal.so
 
 all: $(TARGETS)
 
@@ -15,34 +15,34 @@ install:
 	mkdir -p ${prefix}
 	mkdir -p ${prefix}/lib
 	mkdir -p ${prefix}/include
-	cp libmscal.so ${prefix}/lib
-	cp libmscal.a ${prefix}/lib
-	cp mscal.h ${prefix}/include
-	cp mscal_query ${prefix}/bin
+	cp libmuscal.so ${prefix}/lib
+	cp libmuscal.a ${prefix}/lib
+	cp muscal.h ${prefix}/include
+	cp muscal_query ${prefix}/bin
 
 clean:
 	rm -rf $(TARGETS)
 	rm -rf *.o
 
-libmscal.a: mscal_static.o mscal_util.o um_netcdf.o cJSON.o
+libmuscal.a: muscal_static.o muscal_util.o um_netcdf.o cJSON.o
 	$(AR) rcs $@ $^
 
-libmscal.so: mscal.o mscal_util.o  um_netcdf.o cJSON.o
-	$(CC) -shared $(AM_FCFLAGS) -o libmscal.so $^ $(AM_LDFLAGS)
+libmuscal.so: muscal.o muscal_util.o  um_netcdf.o cJSON.o
+	$(CC) -shared $(AM_FCFLAGS) -o libmuscal.so $^ $(AM_LDFLAGS)
 
-mscal.o: mscal.c
+muscal.o: muscal.c
 	$(CC) -fPIC -DDYNAMIC_LIBRARY -o $@ -c $^ $(AM_CFLAGS)
 
-mscal_static.o: mscal.c
+muscal_static.o: muscal.c
 	$(CC) -o $@ -c $^ $(AM_CFLAGS)
 
 $(objects): %.o: %.c
 	$(CC) -fPIC -DDYNAMIC_LIBRARY $(AM_CFLAGS) -o $@ -c $^
 
-mscal_query.o: mscal_query.c
+muscal_query.o: muscal_query.c
 	$(CC) $(AM_CFLAGS) -o $@ -c $^
 
-mscal_query : mscal_query.o libmscal.a
+muscal_query : muscal_query.o libmuscal.a
 	$(CC) -o $@ $^ $(AM_LDFLAGS)
 
 

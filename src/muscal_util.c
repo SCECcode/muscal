@@ -1,24 +1,24 @@
 /**
-         mscal_util.c
+         muscal_util.c
 **/
 
 #include "ucvm_model_dtypes.h"
-#include "mscal.h"
+#include "muscal.h"
 #include "um_netcdf.h"
 
-#include "mscal_util.h"
+#include "muscal_util.h"
 
-/**** for mscal_dataset_t ****/
-mscal_dataset_t *make_a_mscal_dataset(char *datadir, char *datafile, int tooBig) {
+/**** for muscal_dataset_t ****/
+muscal_dataset_t *make_a_muscal_dataset(char *datadir, char *datafile, int tooBig) {
 
     char filepath[256];
     size_t nelems= 0;
     nc_type vtype;
 
-    mscal_dataset_t *data=(mscal_dataset_t *)malloc(sizeof(mscal_dataset_t));
+    muscal_dataset_t *data=(muscal_dataset_t *)malloc(sizeof(muscal_dataset_t));
 
     sprintf(filepath, "%s/%s", datadir, datafile);
-    if(mscal_ucvm_debug) fprintf(stderrfp," data file ..%s\n", filepath);
+    if(muscal_ucvm_debug) fprintf(stderrfp," data file ..%s\n", filepath);
 
 /* setup ncid */
     data->ncid=open_nc(filepath);
@@ -26,7 +26,7 @@ mscal_dataset_t *make_a_mscal_dataset(char *datadir, char *datafile, int tooBig)
 /* setup nx/ny/nz and void ptrs */
     data->longitudes=(float *) get_nc_float_buffer(data->ncid, "longitude", filepath, &vtype, &nelems, 1);
     data->nx=nelems;
-    if(mscal_ucvm_debug) {
+    if(muscal_ucvm_debug) {
         fprintf(stderrfp, "  Longitudes: %d\n", nelems);
         for(int i=0;i<nelems; i++) {
             fprintf(stderrfp, "%d  %f\n", i, data->longitudes[i]);
@@ -35,7 +35,7 @@ mscal_dataset_t *make_a_mscal_dataset(char *datadir, char *datafile, int tooBig)
 
     data->latitudes=(float *) get_nc_float_buffer(data->ncid, "latitude", filepath, &vtype, &nelems, 1);
     data->ny=nelems;
-    if(mscal_ucvm_debug) {
+    if(muscal_ucvm_debug) {
         fprintf(stderrfp, "  Latitude: %d\n", nelems);
         for(int i=0;i<nelems; i++) {
             fprintf(stderrfp, "%d  %f\n", i, data->latitudes[i]);
@@ -44,7 +44,7 @@ mscal_dataset_t *make_a_mscal_dataset(char *datadir, char *datafile, int tooBig)
 
     data->depths=(float *) get_nc_float_buffer(data->ncid, "depth", filepath, &vtype, &nelems, 1);
     data->nz=nelems;
-    if(mscal_ucvm_debug) {
+    if(muscal_ucvm_debug) {
         fprintf(stderrfp, "  Depths: %d\n", nelems);
         for(int i=0;i<nelems; i++) {
             fprintf(stderrfp, "%d  %f\n", i, data->depths[i]);
@@ -87,7 +87,7 @@ mscal_dataset_t *make_a_mscal_dataset(char *datadir, char *datafile, int tooBig)
 }
 
 
-int free_mscal_dataset(mscal_dataset_t *data) {
+int free_muscal_dataset(muscal_dataset_t *data) {
     free(data->depths);
     free(data->latitudes);
     free(data->longitudes);
@@ -108,12 +108,12 @@ int free_mscal_dataset(mscal_dataset_t *data) {
     return SUCCESS;
 }
 
-/**** for mscal_cache_col_t ****/
-mscal_cache_col_t *_add_a_cache_col(mscal_dataset_t *dataset, int target_lat_idx, int target_lon_idx) {
+/**** for muscal_cache_col_t ****/
+muscal_cache_col_t *_add_a_cache_col(muscal_dataset_t *dataset, int target_lat_idx, int target_lon_idx) {
  
    int nz=dataset->nz;
 
-   mscal_cache_col_t *col= (mscal_cache_col_t *) malloc(sizeof(mscal_cache_col_t));
+   muscal_cache_col_t *col= (muscal_cache_col_t *) malloc(sizeof(muscal_cache_col_t));
 
    col->cache_col_lat_idx=target_lat_idx;
    col->cache_col_lon_idx=target_lon_idx;
@@ -132,10 +132,10 @@ mscal_cache_col_t *_add_a_cache_col(mscal_dataset_t *dataset, int target_lat_idx
    return col;
 }
 
-mscal_cache_col_t *find_a_cache_col(mscal_dataset_t *dataset, int target_lat_idx, int target_lon_idx) {
+muscal_cache_col_t *find_a_cache_col(muscal_dataset_t *dataset, int target_lat_idx, int target_lon_idx) {
 
    int cnt= dataset->col_cache_cnt; 
-   mscal_cache_col_t *col;
+   muscal_cache_col_t *col;
 
    for(int i=0; i< cnt; i++) {
      col=dataset->col_cache[i];
@@ -149,12 +149,12 @@ mscal_cache_col_t *find_a_cache_col(mscal_dataset_t *dataset, int target_lat_idx
    col=_add_a_cache_col(dataset, target_lat_idx, target_lon_idx);
     
    // find a space to put in (in case it is full)
-   if( cnt < MSCAL_CACHE_COL_MAX) {
+   if( cnt < MUSCAL_CACHE_COL_MAX) {
        dataset->col_cache[cnt]=col;
        dataset->col_cache_cnt=cnt+1;
        } else {
 // else has to free one out
-         int use_idx=(cnt+1) % MSCAL_CACHE_COL_MAX;
+         int use_idx=(cnt+1) % MUSCAL_CACHE_COL_MAX;
          free_a_cache_col(dataset->col_cache[use_idx]);
          dataset->col_cache[use_idx]=col;
 
@@ -163,7 +163,7 @@ mscal_cache_col_t *find_a_cache_col(mscal_dataset_t *dataset, int target_lat_idx
    return col;     
 }
 
-void free_a_cache_col(mscal_cache_col_t *col) {
+void free_a_cache_col(muscal_cache_col_t *col) {
 
    // free buffer first 
    free(col->col_vp_buffer);
@@ -173,14 +173,14 @@ void free_a_cache_col(mscal_cache_col_t *col) {
    free(col);
 }
 
-/**** for mscal_cache_layer_t ****/
-mscal_cache_layer_t *_add_a_cache_layer(mscal_dataset_t *dataset, int target_dep_idx) {
+/**** for muscal_cache_layer_t ****/
+muscal_cache_layer_t *_add_a_cache_layer(muscal_dataset_t *dataset, int target_dep_idx) {
 
     int nx=dataset->nx;
     int ny=dataset->ny;
 
-    if(mscal_ucvm_debug) { fprintf(stderrfp, "  Loading a new layer: %zu\n", target_dep_idx); }
-    mscal_cache_layer_t *layer= (mscal_cache_layer_t *) malloc(sizeof(mscal_cache_layer_t));
+    if(muscal_ucvm_debug) { fprintf(stderrfp, "  Loading a new layer: %zu\n", target_dep_idx); }
+    muscal_cache_layer_t *layer= (muscal_cache_layer_t *) malloc(sizeof(muscal_cache_layer_t));
 
     layer->cache_layer_dep_idx=target_dep_idx;
 
@@ -197,10 +197,10 @@ mscal_cache_layer_t *_add_a_cache_layer(mscal_dataset_t *dataset, int target_dep
     return layer;
 }
 
-mscal_cache_layer_t *find_a_cache_layer(mscal_dataset_t *dataset, int target_dep_idx) {
+muscal_cache_layer_t *find_a_cache_layer(muscal_dataset_t *dataset, int target_dep_idx) {
 
    int cnt= dataset->layer_cache_cnt;
-   mscal_cache_layer_t *layer;
+   muscal_cache_layer_t *layer;
 
    for(int i=0; i< cnt; i++) {
      layer=dataset->layer_cache[i];
@@ -213,19 +213,19 @@ mscal_cache_layer_t *find_a_cache_layer(mscal_dataset_t *dataset, int target_dep
    layer=_add_a_cache_layer(dataset, target_dep_idx);
 
    // find a space to put in (in case it is full)
-   if( cnt < MSCAL_CACHE_LAYER_MAX) {
+   if( cnt < MUSCAL_CACHE_LAYER_MAX) {
        dataset->layer_cache[cnt]=layer;
        dataset->layer_cache_cnt=cnt+1;
        } else {
 // else has to free one out
-         int use_idx=(cnt+1) % MSCAL_CACHE_LAYER_MAX;
+         int use_idx=(cnt+1) % MUSCAL_CACHE_LAYER_MAX;
          free_a_cache_layer(dataset->layer_cache[use_idx]);
          dataset->layer_cache[use_idx]=layer;
    }
    return layer;     
 }
 
-void free_a_cache_layer(mscal_cache_layer_t *layer) {
+void free_a_cache_layer(muscal_cache_layer_t *layer) {
 
    free(layer->layer_vp_buffer);
    free(layer->layer_vs_buffer);
@@ -309,9 +309,9 @@ int bucket_an_array(size_t *idx_arr, size_t n) {
         fprintf(stderr, "Error creating buckets\n");
     }
 
-    if(mscal_ucvm_debug) { fprintf(stderrfp, "Unique buckets: %zu\n", bucket_count); }
+    if(muscal_ucvm_debug) { fprintf(stderrfp, "Unique buckets: %zu\n", bucket_count); }
     for (size_t i = 0; i < bucket_count; ++i) {
-        if(mscal_ucvm_debug) { fprintf(stderrfp, "value=%zu count=%zu\n", buckets[i].value, buckets[i].count); }
+        if(muscal_ucvm_debug) { fprintf(stderrfp, "value=%zu count=%zu\n", buckets[i].value, buckets[i].count); }
     }
 
     free(buckets);

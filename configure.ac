@@ -2,7 +2,7 @@ dnl -*- Autoconf -*-
 dnl Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(MSCAL, 1.1.0, software@scec.org)
+AC_INIT(MUSCAL, 1.1.0, software@scec.org)
 AC_CONFIG_MACRO_DIRS([m4])
 AM_INIT_AUTOMAKE([foreign tar-pax no-exeext])
 
@@ -60,21 +60,21 @@ dnl Verify configuration
 dnl
 
 ##check optional large data path
-##MSCAL_LARGEDATA_DIR=$CVM_LARGEDATA_DIR/model/mscal
+##MUSCAL_LARGEDATA_DIR=$CVM_LARGEDATA_DIR/model/muscal
 if test x"$CVM_LARGEDATA_DIR" != x; then
    # test directory existence
-   MSCAL_LARGEDATA_DIR=$CVM_LARGEDATA_DIR/model/mscal
+   MUSCAL_LARGEDATA_DIR=$CVM_LARGEDATA_DIR/model/muscal
 # In docker container building.. this is not accessible  yet ???
    if test x"$CVM_IN_DOCKER" != x; then
-     AM_CONDITIONAL([WITH_MSCAL_LARGEDATA_DIR], true)
-     AC_SUBST(MSCAL_LARGEDATA_DIR)
+     AM_CONDITIONAL([WITH_MUSCAL_LARGEDATA_DIR], true)
+     AC_SUBST(MUSCAL_LARGEDATA_DIR)
    else 
-     AC_CHECK_FILE([$MSCAL_LARGEDATA_DIR/model_MSCAL_CANVAS_dll0.01_vardz_cmpd.nc],
-                [AM_CONDITIONAL([WITH_MSCAL_LARGEDATA_DIR], true) AC_SUBST(MSCAL_LARGEDATA_DIR)],
-                [AM_CONDITIONAL([WITH_MSCAL_LARGEDATA_DIR], false)])
+     AC_CHECK_FILE([$MUSCAL_LARGEDATA_DIR/model_MUSCAL_CANVAS_dll0.01_vardz_cmpd.nc],
+                [AM_CONDITIONAL([WITH_MUSCAL_LARGEDATA_DIR], true) AC_SUBST(MUSCAL_LARGEDATA_DIR)],
+                [AM_CONDITIONAL([WITH_MUSCAL_LARGEDATA_DIR], false)])
    fi
 else
-   AM_CONDITIONAL(WITH_MSCAL_LARGEDATA_DIR, false)
+   AM_CONDITIONAL(WITH_MUSCAL_LARGEDATA_DIR, false)
 fi
 
 AC_SUBST(CFLAGS)

@@ -2,10 +2,10 @@
 utm_zone=11
 
 # Model directory
-model_dir = mscal 
+model_dir = muscal 
 model_data_path = https://g-3a9041.a78b8.36fe.data.globus.org/ucvm/models
 
-data_file = { "LABEL" : "first", "FILE" : "model_MSCAL_CANVAS_dll0.01_vardz_cmpd.nc" }
-#data_file = { "LABEL" : "first", "FILE" : "model_MSCAL_CANVAS_dll0.01_dz50_cmpd.nc" }
+data_file = { "LABEL" : "first", "FILE" : "model_MUSCAL_CANVAS_dll0.01_vardz_cmpd.nc" }
+#data_file = { "LABEL" : "first", "FILE" : "model_MUSCAL_CANVAS_dll0.01_dz50_cmpd.nc" }
 
 

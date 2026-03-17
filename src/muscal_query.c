@@ -1,10 +1,10 @@
 /*
- * @file mscal_query.c
- * @brief Bootstraps the test framework for the MSCAL library.
+ * @file muscal_query.c
+ * @brief Bootstraps the test framework for the MUSCAL library.
  * @author - SCEC
  * @version 1.0
  *
- * Tests the MSCAL library by loading it and executing the code as
+ * Tests the MUSCAL library by loading it and executing the code as
  * UCVM would.
  *
  */
@@ -14,9 +14,9 @@
 #include <stdio.h>
 #include <assert.h>
 #include "ucvm_model_dtypes.h"
-#include "mscal.h"
+#include "muscal.h"
 
-int mscal_debug=0;
+int muscal_debug=0;
 
 int _compare_double(double f1, double f2) {
   double precision = 0.00001;
@@ -29,9 +29,9 @@ int _compare_double(double f1, double f2) {
 
 /* Usage function */
 void usage() {
-  printf("     mscal_query - (c) SCEC\n");
-  printf("Extract velocities from a MSCAL\n");
-  printf("\tusage: mscal_query [-d][-h] < file.in\n\n");
+  printf("     muscal_query - (c) SCEC\n");
+  printf("Extract velocities from a MUSCAL\n");
+  printf("\tusage: muscal_query [-d][-h] < file.in\n\n");
   printf("Flags:\n");
   printf("\t-d enable debug/verbose mode\n\n");
   printf("\t-h usage\n\n");
@@ -44,7 +44,7 @@ extern char *optarg;
 extern int optind, opterr, optopt;
 
 /**
- * Initializes and MSCAL in standalone mode with ucvm plugin 
+ * Initializes and MUSCAL in standalone mode with ucvm plugin 
  * api.
  *
  * @param argc The number of arguments.
@@ -54,11 +54,11 @@ extern int optind, opterr, optopt;
 int main(int argc, char* const argv[]) {
 
 	// Declare the structures.
-	mscal_point_t *pt;
-	mscal_properties_t *ret;
+	muscal_point_t *pt;
+	muscal_properties_t *ret;
 
-	pt = malloc(10 * sizeof(mscal_point_t));
-	ret = malloc(10 * sizeof(mscal_properties_t));
+	pt = malloc(10 * sizeof(muscal_point_t));
+	ret = malloc(10 * sizeof(muscal_properties_t));
 
         int rc;
         int opt;
@@ -68,7 +68,7 @@ int main(int argc, char* const argv[]) {
         while ((opt = getopt(argc, argv, "dh")) != -1) {
           switch (opt) {
           case 'd':
-            mscal_debug=1;
+            muscal_debug=1;
             break;
           case 'h':
             usage();
@@ -80,15 +80,15 @@ int main(int argc, char* const argv[]) {
           }
         }
 
-        if(mscal_debug) { mscal_setdebug(); }
+        if(muscal_debug) { muscal_setdebug(); }
 
 	// Initialize the model. 
         // try to use Use UCVM_INSTALL_PATH
         char *envstr=getenv("UCVM_INSTALL_PATH");
         if(envstr != NULL) {
-	   assert(mscal_init(envstr, "mscal") == 0);
+	   assert(muscal_init(envstr, "muscal") == 0);
            } else {
-	     assert(mscal_init("..", "mscal") == 0);
+	     assert(muscal_init("..", "muscal") == 0);
         }
 	printf("Loaded the model successfully.\n");
 
@@ -102,7 +102,7 @@ int main(int argc, char* const argv[]) {
               continue;
            }
           
-           if(mscal_debug) {
+           if(muscal_debug) {
              fprintf(stderr,"LINE: %s\n",line);
            }
 
@@ -110,7 +110,7 @@ int main(int argc, char* const argv[]) {
            if (sscanf(line,"%lf %lf %lf",
                    &pt[idx].longitude,&pt[idx].latitude,&pt[idx].depth) == 3) {
 
-              if(mscal_debug) {
+              if(muscal_debug) {
                   fprintf(stderr, "calling : with %f,%f using > depth(%f)\n",
                          pt[idx].longitude,pt[idx].latitude,pt[idx].depth);
               }
@@ -119,7 +119,7 @@ int main(int argc, char* const argv[]) {
         }
 
         if(idx > 0) {
-	   rc=mscal_query(pt, ret, idx);
+	   rc=muscal_query(pt, ret, idx);
            if(rc == 0) {
              for(int i=0; i<idx; i++) {
                printf("vs:%lf vp:%lf rho:%lf\n",ret[i].vs, ret[i].vp, ret[i].rho);
@@ -127,7 +127,7 @@ int main(int argc, char* const argv[]) {
            }
         }
 
-	assert(mscal_finalize() == 0);
+	assert(muscal_finalize() == 0);
 	printf("Model closed successfully.\n");
 
 	return 0;

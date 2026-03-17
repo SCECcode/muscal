@@ -6,29 +6,29 @@ AM_FCFLAGS = ${FCFLAGS}
 AM_LDFLAGS = ${LDFLAGS}
 
 all:
-if WITH_MSCAL_LARGEDATA_DIR
-	echo "USING WITH_MSCAL_LARGEDATA_DIR in mscal"
+if WITH_MUSCAL_LARGEDATA_DIR
+	echo "USING WITH_MUSCAL_LARGEDATA_DIR in muscal"
 else
-	echo "NOT USING WITH_MSCAL_LARGEDATA_DIR in mscal"
-	if [ ! -d "mscal" ]; then \
+	echo "NOT USING WITH_MUSCAL_LARGEDATA_DIR in muscal"
+	if [ ! -d "muscal" ]; then \
 		./make_data_files.py; \
 	fi 
 endif
 
 install:
-if WITH_MSCAL_LARGEDATA_DIR
-	if [ ! -d "${prefix}/data/mscal" ]; then \
+if WITH_MUSCAL_LARGEDATA_DIR
+	if [ ! -d "${prefix}/data/muscal" ]; then \
 		$(MKDIR_P) ${prefix}/data; \
-		$(LN_S) -f $(MSCAL_LARGEDATA_DIR) ${prefix}/data/mscal; \
-		echo "USING WITH_MSCAL_LARGEDATA_DIR in mscal"; \
+		$(LN_S) -f $(MUSCAL_LARGEDATA_DIR) ${prefix}/data/muscal; \
+		echo "USING WITH_MUSCAL_LARGEDATA_DIR in muscal"; \
 	fi
 	cp config ${prefix}/data
 else
-	if [ ! -d "${prefix}/data/mscal" ]; then \
+	if [ ! -d "${prefix}/data/muscal" ]; then \
 		$(MKDIR_P) ${prefix}/data; \
-		mv mscal ${prefix}/data; \
-		$(LN_S) -f ${prefix}/data/mscal .; \
-		echo "NOT USING WITH_MSCAL_LARGEDATA_DIR in mscal"; \
+		mv muscal ${prefix}/data; \
+		$(LN_S) -f ${prefix}/data/muscal .; \
+		echo "NOT USING WITH_MUSCAL_LARGEDATA_DIR in muscal"; \
 	fi
 	cp config ${prefix}/data
 endif

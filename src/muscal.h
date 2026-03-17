@@ -1,13 +1,13 @@
 /**
- * @file mscal.h
- * @brief Main header file for MSCAL library.
+ * @file muscal.h
+ * @brief Main header file for MUSCAL library.
  * @version 1.0
  *
- * Delivers the MSCAL model 
+ * Delivers the MUSCAL model 
  *
  */
-#ifndef MSCAL_H
-#define MSCAL_H
+#ifndef MUSCAL_H
+#define MUSCAL_H
 
 // Includes
 #include <stdio.h>
@@ -16,7 +16,7 @@
 #include <unistd.h>
 #include <math.h>
 
-#include "mscal_util.h"
+#include "muscal_util.h"
 
 /** Defines a return value of success */
 #define SUCCESS 0
@@ -24,25 +24,25 @@
 #define FAIL 1
 
 /* config string */
-#define MSCAL_CONFIG_MAX 1000
-#define MSCAL_DATASET_MAX 10
+#define MUSCAL_CONFIG_MAX 1000
+#define MUSCAL_DATASET_MAX 10
 
-extern int mscal_ucvm_debug;
+extern int muscal_ucvm_debug;
 extern FILE *stderrfp;
 
 // Structures
 /** Defines a point (latitude, longitude, and depth) in WGS84 format */
-typedef struct mscal_point_t {
+typedef struct muscal_point_t {
 	/** Longitude member of the point */
 	double longitude;
 	/** Latitude member of the point */
 	double latitude;
 	/** Depth member of the point */
 	double depth;
-} mscal_point_t;
+} muscal_point_t;
 
 /** Defines the material properties this model will retrieve. */
-typedef struct mscal_properties_t {
+typedef struct muscal_properties_t {
 	/** P-wave velocity in meters per second */
 	double vp;
 	/** S-wave velocity in meters per second */
@@ -53,7 +53,7 @@ typedef struct mscal_properties_t {
 	double qp;
 	/** Qs */
 	double qs;
-} mscal_properties_t;
+} muscal_properties_t;
 
 /**
 Dimensions: 3
@@ -63,8 +63,8 @@ Dimensions: 3
 Total elements: 15073884
 **/
 
-/** The MSCAL configuration structure. */
-typedef struct mscal_configuration_t {
+/** The MUSCAL configuration structure. */
+typedef struct muscal_configuration_t {
 	/** The zone of UTM projection */
 	int utm_zone;
 	/** The model directory */
@@ -76,29 +76,29 @@ typedef struct mscal_configuration_t {
 
         /* how many datasets are in the model */
         int dataset_cnt;
-        char *dataset_files[MSCAL_DATASET_MAX];  //strdup
-	char *dataset_labels[MSCAL_DATASET_MAX]; // strdup
-} mscal_configuration_t;
+        char *dataset_files[MUSCAL_DATASET_MAX];  //strdup
+	char *dataset_labels[MUSCAL_DATASET_MAX]; // strdup
+} muscal_configuration_t;
 
-typedef struct mscal_model_t {
+typedef struct muscal_model_t {
         int dataset_cnt;
-        mscal_dataset_t *datasets[MSCAL_DATASET_MAX];
-} mscal_model_t;
+        muscal_dataset_t *datasets[MUSCAL_DATASET_MAX];
+} muscal_model_t;
 
 
 // Constants
 /** The version of the model. */
-extern const char *mscal_version_string;
+extern const char *muscal_version_string;
 
 // Variables
 /** Set to 1 when the model is ready for query. */
-extern int mscal_is_initialized;
+extern int muscal_is_initialized;
 
 /** Configuration parameters. */
-extern mscal_configuration_t *mscal_configuration;
+extern muscal_configuration_t *muscal_configuration;
 
 /** Holds pointers to the velocity model data OR indicates it can be read from file. */
-extern mscal_model_t *mscal_velocity_model;
+extern muscal_model_t *muscal_velocity_model;
 
 // UCVM API Required Functions
 
@@ -111,47 +111,47 @@ int model_finalize();
 /** Returns version information */
 int model_version(char *ver, int len);
 /** Queries the model */
-int model_query(mscal_point_t *points, mscal_properties_t *data, int numpts);
+int model_query(muscal_point_t *points, muscal_properties_t *data, int numpts);
 
 int (*get_model_init())(const char *, const char *);
-int (*get_model_query())(mscal_point_t *, mscal_properties_t *, int);
+int (*get_model_query())(muscal_point_t *, muscal_properties_t *, int);
 int (*get_model_finalize())();
 int (*get_model_version())(char *, int);
 
 #endif
 
-// MSCAL Related Functions
+// MUSCAL Related Functions
 
 /** Initializes the model */
-int mscal_init(const char *dir, const char *label);
+int muscal_init(const char *dir, const char *label);
 /** Cleans up the model (frees memory, etc.) */
-int mscal_finalize();
+int muscal_finalize();
 /** Returns version information */
-int mscal_version(char *ver, int len);
+int muscal_version(char *ver, int len);
 /** Queries the model */
-int mscal_query(mscal_point_t *points, mscal_properties_t *data, int numpts);
+int muscal_query(muscal_point_t *points, muscal_properties_t *data, int numpts);
 
 // Non-UCVM Helper Functions
 //
 /** Reads the configuration file and helper functions. */
-int mscal_read_configuration(char *file, mscal_configuration_t *config);
-int mscal_configuration_finalize(mscal_configuration_t *config);
+int muscal_read_configuration(char *file, muscal_configuration_t *config);
+int muscal_configuration_finalize(muscal_configuration_t *config);
 
 /** Prints out the error string. */
-void mscal_print_error(char *err);
+void muscal_print_error(char *err);
 /** Retrieves the value at a specified grid point in the model. */
-void mscal_read_properties(int x, int y, int z, mscal_properties_t *data);
+void muscal_read_properties(int x, int y, int z, muscal_properties_t *data);
 /** Attempts to malloc the model size in memory and read it in. */
-int mscal_read_model(mscal_configuration_t *config, mscal_model_t *model, char* dir);
+int muscal_read_model(muscal_configuration_t *config, muscal_model_t *model, char* dir);
 /** toggle debug flag **/
-void mscal_setdebug();
+void muscal_setdebug();
 
 /** helper function for velocity_model **/
-int mscal_velocity_model_init(mscal_model_t *model);
-int mscal_velocity_model_finalize(mscal_model_t *model);
+int muscal_velocity_model_init(muscal_model_t *model);
+int muscal_velocity_model_finalize(muscal_model_t *model);
 
 /** parse JSON metadata blob per dataset **/
-int _setup_a_dataset(mscal_configuration_t *conf, char *blobstr);
+int _setup_a_dataset(muscal_configuration_t *conf, char *blobstr);
 
 void _trimLast(char *str, char m);
 void _splitline(char* lptr, char key[], char value[]);

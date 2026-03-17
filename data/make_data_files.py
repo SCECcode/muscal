@@ -15,7 +15,7 @@ if sys.version_info.major >= (3) :
 else:
   from urllib2 import urlopen
 
-model = "MSCAL"
+model = "MUSCAL"
 
 def usage():
     print("\n./make_data_files.py\n\n")
@@ -78,7 +78,7 @@ def main():
     print("\nDownloading model dataset\n")
 
 
-#check if cvm-large-dataset/mscal exists or not
+#check if cvm-large-dataset/muscal exists or not
 #yes,  link it over
     volume_top_dir=os.environ.get('CVM_VOLUME_TOP_DIR')
     if volume_top_dir != None :
@@ -92,8 +92,8 @@ def main():
     if not os.path.isdir(mdir) :
         subprocess.check_call(["mkdir", "-p", mdir])
 
-    fname=mdir+"/model_MSCAL_CANVAS_dll0.01_vardz_cmpd.nc"
-    tarfile=mdir+"/model_MSCAL_CANVAS_dll0.01_vardz_cmpd.nc.nc.tar.gz"
+    fname=mdir+"/model_MUSCAL_CANVAS_dll0.01_vardz_cmpd.nc"
+    tarfile=mdir+"/model_MUSCAL_CANVAS_dll0.01_vardz_cmpd.nc.nc.tar.gz"
     if not os.path.isfile(fname) :
       print("download ", tarfile)
       url = path + "/" + tarfile 
