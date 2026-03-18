@@ -76,7 +76,7 @@ typedef struct muscal_dataset_t {
 
 
 /* utilitie functions */
-muscal_dataset_t *make_a_muscal_dataset(char *datadir, char *datafile, int tooBig);
+muscal_dataset_t *make_a_muscal_dataset(char *datadir, char *datafile, int tooBig, int useBinary);
 int free_muscal_dataset(muscal_dataset_t *data);
 muscal_cache_col_t *find_a_cache_col(muscal_dataset_t *dataset, int target_lat_idx, int target_lon_idx);
 void free_a_cache_col(muscal_cache_col_t *col);

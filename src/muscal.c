@@ -17,7 +17,8 @@
 int muscal_ucvm_debug=0;
 FILE *stderrfp=NULL;
 
-int TooBig=0;
+int tooBig=0;
+int useBinary=1; 
 int _ON=0;
 
 /** The config of the model */
@@ -205,11 +206,11 @@ if(muscal_ucvm_debug){ if(i<5) fprintf(stderrfp,"    with idx lon/lat/dep = %d/%
     int bucket_cnt=bucket_an_array(dep_idx_buffer, numpoints);
 
 // handle access 
-// if not TooBig, grab from in-memory buffer one at a time
+// if not tooBig, grab from in-memory buffer one at a time
 // if tooBig, then collect up all the index list and make just one call and
 // retrieve and disperse the result back into data
 
-    if(!TooBig) { 
+    if(!tooBig) { 
 if(muscal_ucvm_debug){ fprintf(stderrfp,">> In-Memory access \n"); }
 
 // it is not too big, extract from data buffers one at a time
@@ -532,7 +533,7 @@ int muscal_read_model(muscal_configuration_t *config, muscal_model_t *model, cha
 
     int max_idx=model->dataset_cnt; // how many datasets are there
     for(int i=0; i<max_idx;i++) { 
-        muscal_dataset_t *data=make_a_muscal_dataset(datadir, config->dataset_files[i], TooBig); 
+        muscal_dataset_t *data=make_a_muscal_dataset(datadir, config->dataset_files[i], tooBig, useBinary); 
 // put into the velocity model
         model->datasets[i]=data;
     }

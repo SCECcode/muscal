@@ -5,7 +5,7 @@
 
 #include "um_netcdf.h"
 
-int debug=0;
+int debug=1;
 
 /* Open file (read-only) */
 int open_nc(const char* path) {
@@ -246,15 +246,14 @@ cleanup:
 }
 
 // e_dimlens,  expected dimlens
-void *get_nc_float_buffer(int ncid, char *varname, const char *path, nc_type *vtype, size_t *nelems, int e_dimlens) { 
+float *get_nc_float_buffer(int ncid, char *varname, const char *path, nc_type *vtype, size_t *nelems, int e_dimlens) { 
     int varid=-1;
     int ndims = 0;
     int natts = 0;
     size_t nnelems = 1;
     int *dimids=0;
     size_t *dimlens=0;
-    void *buffer = NULL;
-    void *tmpbuffer = NULL;
+    float *buffer = NULL;
     size_t elem_size = 0;
     nc_type nvtype;
 
@@ -272,85 +271,42 @@ void *get_nc_float_buffer(int ncid, char *varname, const char *path, nc_type *vt
         case NC_BYTE:
         case NC_UBYTE:
             if(debug) printf("\nBuffer of NC_BYTE or NC_UBYTE");
-            elem_size = sizeof(unsigned char);
-            tmpbuffer = malloc(nnelems * elem_size);
-            if (!tmpbuffer) { fprintf(stderr, "malloc failed\n"); goto cleanup; }
-            NC_CHECK(nc_get_var_uchar(ncid, varid, (unsigned char*)tmpbuffer));
             break;
 
         case NC_CHAR:
-            /* NC_CHAR often represents character arrays / strings */
             if(debug) printf("\nBuffer of NC_CHAR");
-            elem_size = sizeof(char);
-            tmpbuffer = malloc(nnelems * elem_size);
-            if (!tmpbuffer) { fprintf(stderr, "malloc failed\n"); goto cleanup; }
-            NC_CHECK(nc_get_var_text(ncid, varid, (char*)tmpbuffer));
             break;
 
         case NC_SHORT:
             if(debug) printf("\nBuffer of NC_SHORT");
-            elem_size = sizeof(short);
-            tmpbuffer = malloc(nnelems * elem_size);
-            if (!tmpbuffer) { fprintf(stderr, "malloc failed\n"); goto cleanup; }
-            NC_CHECK(nc_get_var_short(ncid, varid, (short*)tmpbuffer));
             break;
 
         case NC_USHORT:
             if(debug) printf("\nBuffer of NC_USHORT");
-            elem_size = sizeof(unsigned short);
-            tmpbuffer = malloc(nnelems * elem_size);
-            if (!tmpbuffer) { fprintf(stderr, "malloc failed\n"); goto cleanup; }
-            NC_CHECK(nc_get_var_ushort(ncid, varid, (unsigned short*)tmpbuffer));
             break;
 
         case NC_INT:
             if(debug) printf("\nBuffer of NC_INT");
-            elem_size = sizeof(int);
-            tmpbuffer = malloc(nnelems * elem_size);
-            if (!tmpbuffer) { fprintf(stderr, "malloc failed\n"); goto cleanup; }
-            NC_CHECK(nc_get_var_int(ncid, varid, (int*)tmpbuffer));
             break;
 
         case NC_UINT:
             if(debug) printf("\nBuffer of NC_UINT");
-            elem_size = sizeof(unsigned int);
-            tmpbuffer = malloc(nnelems * elem_size);
-            if (!tmpbuffer) { fprintf(stderr, "malloc failed\n"); goto cleanup; }
-            NC_CHECK(nc_get_var_uint(ncid, varid, (unsigned int*)tmpbuffer));
             break;
 
-/*** special case ***/
         case NC_INT64:
             if(debug) printf("\nBuffer of NC_INT64 => NC_FLOAT");
-            elem_size = sizeof(long long);
-            tmpbuffer = malloc(nnelems * elem_size);
-            if (!tmpbuffer) { fprintf(stderr, "malloc failed\n"); goto cleanup; }
-            NC_CHECK(nc_get_var_longlong(ncid, varid, (long long*)tmpbuffer));
             break;
 
         case NC_UINT64:
             if(debug) printf("\nBuffer of NC_UINT64");
-            elem_size = sizeof(unsigned long long);
-            tmpbuffer = malloc(nnelems * elem_size);
-            if (!tmpbuffer) { fprintf(stderr, "malloc failed\n"); goto cleanup; }
-            NC_CHECK(nc_get_var_ulonglong(ncid, varid, (unsigned long long*)tmpbuffer));
             break;
 
         case NC_FLOAT:
             if(debug) printf("\nBuffer of NC_FLOAT");
-            elem_size = sizeof(float);
-            tmpbuffer = malloc(nnelems * elem_size);
-            //fprintf(stderr,"   needs %d \n",nnelems * elem_size);
-            if (!tmpbuffer) { fprintf(stderr, "malloc failed\n"); goto cleanup; }
-            NC_CHECK(nc_get_var_float(ncid, varid, (float*)tmpbuffer));
             break;
 
         case NC_DOUBLE:
             if(debug) printf("\nBuffer of NC_DOUBLE => NC_FLOAT");
-            elem_size = sizeof(double);
-            tmpbuffer = malloc(nnelems * elem_size);
-            if (!tmpbuffer) { fprintf(stderr, "malloc failed\n"); goto cleanup; }
-            NC_CHECK(nc_get_var_double(ncid, varid, (double*)tmpbuffer));
             break;
 
         default:
@@ -361,97 +317,13 @@ void *get_nc_float_buffer(int ncid, char *varname, const char *path, nc_type *vt
     elem_size = sizeof(float);
     buffer = malloc(nnelems * elem_size);
     if (!buffer) { fprintf(stderr, "malloc failed\n"); goto cleanup; }
-
-    /* convert to a float list */
-    switch ( nvtype ) {
-        case NC_BYTE:
-        case NC_UBYTE:
-            {
-	    unsigned char *tbuffer= (unsigned char *) tmpbuffer;
-            for(int j=0; j<nnelems; j++) { ((float*)buffer)[j]=(float)(tbuffer)[j]; }
-            free(tmpbuffer);
-	    }
-            break;
-
-        case NC_CHAR:
-	    {
-	    char *tbuffer= (char *) tmpbuffer;
-            for(int j=0; j<nnelems; j++) { ((float*)buffer)[j]=(float)(tbuffer)[j]; }
-            free(tmpbuffer);
-	    }
-            break;
-
-        case NC_SHORT:
-	    {
-	    short *tbuffer= (short *) tmpbuffer;
-            for(int j=0; j<nnelems; j++) { ((float*)buffer)[j]=(float)(tbuffer)[j]; }
-            free(tmpbuffer);
-	    }
-            break;
-
-        case NC_USHORT:
-	    {
-	    unsigned short *tbuffer= (unsigned short *) tmpbuffer;
-            for(int j=0; j<nnelems; j++) { ((float*)buffer)[j]=(float)(tbuffer)[j]; }
-            free(tmpbuffer);
-	    }
-            break;
-
-        case NC_INT:
-	    {
-	    int *tbuffer= (int *) tmpbuffer;
-            for(int j=0; j<nnelems; j++) { ((float*)buffer)[j]=(float)(tbuffer)[j]; }
-            free(tmpbuffer);
-	    }
-            break;
-
-        case NC_UINT:
-	    {
-	    unsigned int *tbuffer= (unsigned int *) tmpbuffer;
-            for(int j=0; j<nnelems; j++) { ((float*)buffer)[j]=(float)(tbuffer)[j]; }
-            free(tmpbuffer);
-	    }
-            break;
-
-        case NC_INT64:
-	    {
-	    long long *tbuffer= (long long *) tmpbuffer;
-            for(int j=0; j<nnelems; j++) { ((float*)buffer)[j]=(float)(tbuffer)[j]; }
-            free(tmpbuffer);
-	    }
-            break;
-
-        case NC_UINT64:
-	    {
-	    unsigned long long *tbuffer= (unsigned long long *) tmpbuffer;
-            for(int j=0; j<nnelems; j++) { ((float*)buffer)[j]=(float)(tbuffer)[j]; }
-            free(tmpbuffer);
-	    }
-            break;
-
-        case NC_FLOAT:
-	    buffer = tmpbuffer;
-            break;
-
-        case NC_DOUBLE:
-	    {
-	    double *tbuffer= (double *) tmpbuffer;
-            for(int j=0; j<nnelems; j++) { ((float*)buffer)[j]=(float)(tbuffer)[j]; }
-            free(tmpbuffer);
-	    }
-            break;
-
-        default:
-            fprintf(stderr, "Unsupported variable type (type id=%d)\n", nvtype);
-            goto cleanup;
-    }
-    nvtype=NC_FLOAT;
+    NC_CHECK(nc_get_var_float(ncid, varid, (float*)buffer));
 
     /* Print some information and sample values */
     if(debug) {
         printf("\n  File: %s\n", path);
         printf("  Var name: %s\n", varname);
-        printf("  Type: %d\n", (int)nvtype);
+        printf("  Original Type: %d\n", (int)nvtype);
         printf("  Dimensions: %d\n", ndims);
         for (int i = 0; i < ndims; ++i) {
             char dname[NC_MAX_NAME + 1];
@@ -469,6 +341,25 @@ cleanup:
     return buffer;
 }
 
+
+float *get_binary_float_buffer(const char *datadir, char *datafile, int total) {
+
+    int elem_size = sizeof(float);
+    float *buffer = (float *) malloc(total * elem_size);
+    if (!buffer) { fprintf(stderr, "malloc failed\n"); return NULL; }
+
+    char filepath[256];
+    sprintf(filepath, "%s/%s", datadir, datafile);
+    if(debug) fprintf(stderr," data file ..%s\n", filepath);
+
+    FILE *fp=fopen(filepath,"rb");
+    size_t read_count = fread(buffer, sizeof(float), total, fp);
+    if (read_count != total) {
+        printf("Warning: read %zu elements (expected %d)\n", read_count, total);
+    }
+    fclose(fp);
+    return buffer;
+}
 
 int find_buffer_idx(float *buffer, size_t nelems, float target) {
     size_t lo = 0, hi = nelems; // search in [lo, hi)

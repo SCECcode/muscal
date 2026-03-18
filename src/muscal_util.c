@@ -2,6 +2,8 @@
          muscal_util.c
 **/
 
+#include <string.h>
+
 #include "ucvm_model_dtypes.h"
 #include "muscal.h"
 #include "um_netcdf.h"
@@ -9,8 +11,7 @@
 #include "muscal_util.h"
 
 /**** for muscal_dataset_t ****/
-muscal_dataset_t *make_a_muscal_dataset(char *datadir, char *datafile, int tooBig) {
-
+muscal_dataset_t *make_a_muscal_dataset(char *datadir, char *datafile, int tooBig, int useBinary) {
     char filepath[256];
     size_t nelems= 0;
     nc_type vtype;
@@ -65,14 +66,19 @@ muscal_dataset_t *make_a_muscal_dataset(char *datadir, char *datafile, int tooBi
 /* load all vp/vs/rho data in memory */
         int total= data->nx * data->ny * data->nz;
 
-        data->vp_buffer = (float *)malloc(total * sizeof(float));
-        data->vs_buffer = (float *)malloc(total * sizeof(float));
-        data->rho_buffer = (float *)malloc(total * sizeof(float));
+        //data->vp_buffer = (float *)malloc(total * sizeof(float));
+        //data->vs_buffer = (float *)malloc(total * sizeof(float));
+        //data->rho_buffer = (float *)malloc(total * sizeof(float));
 
-        data->vp_buffer=get_nc_float_buffer(data->ncid, "vp", filepath, &vtype, &nelems, 3);
-        data->vs_buffer=get_nc_float_buffer(data->ncid, "vs", filepath, &vtype, &nelems, 3);
-        data->rho_buffer=get_nc_float_buffer(data->ncid, "rho", filepath, &vtype, &nelems, 3);
-
+	if(!useBinary) {
+            data->vp_buffer=get_nc_float_buffer(data->ncid, "vp", filepath, &vtype, &nelems, 3);
+            data->vs_buffer=get_nc_float_buffer(data->ncid, "vs", filepath, &vtype, &nelems, 3);
+            data->rho_buffer=get_nc_float_buffer(data->ncid, "rho", filepath, &vtype, &nelems, 3);
+	    } else {
+                data->vp_buffer = get_binary_float_buffer(datadir, "vp.dat", total);
+                data->vs_buffer = get_binary_float_buffer(datadir, "vs.dat", total);
+                data->rho_buffer = get_binary_float_buffer(datadir, "rho.dat", total);
+        }
 	data->elems=total;
         data->in_memory=1;
 
@@ -85,6 +91,8 @@ muscal_dataset_t *make_a_muscal_dataset(char *datadir, char *datafile, int tooBi
 
     return data;
 }
+
+
 
 
 int free_muscal_dataset(muscal_dataset_t *data) {
