@@ -5,7 +5,7 @@
 
 #include "um_netcdf.h"
 
-int debug=1;
+int debug=0;
 
 /* Open file (read-only) */
 int open_nc(const char* path) {
