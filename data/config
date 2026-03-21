@@ -5,6 +5,12 @@ utm_zone=11
 model_dir = muscal 
 model_data_path = https://g-3a9041.a78b8.36fe.data.globus.org/ucvm/models
 
+interpolation = on
+# set this if want to use vp.dat/vs.dat/rho.dat in memory
+binary_data = on
+# set this if netcdf data is too big to load in memory, use nc_FUNCTIONS to access
+too_big = off
+
 data_file = { "LABEL" : "first", "FILE" : "model_MUSCAL_CANVAS_dll0.01_vardz_cmpd.nc" }
 
 

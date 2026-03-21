@@ -69,15 +69,17 @@ typedef struct muscal_configuration_t {
 	int utm_zone;
 	/** The model directory */
 	char model_dir[128];
-        /** GTL on or off (1 or 0) */
-        int gtl;
-	/** interpolation (1 or 0) */
+
+	/** interpolation on or off (1 or 0) */
 	int interpolation;
+	/** use_binary on or off (1 or 0) */
+	int use_binary;
 
         /* how many datasets are in the model */
         int dataset_cnt;
         char *dataset_files[MUSCAL_DATASET_MAX];  //strdup
 	char *dataset_labels[MUSCAL_DATASET_MAX]; // strdup
+						  
 } muscal_configuration_t;
 
 typedef struct muscal_model_t {

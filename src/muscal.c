@@ -18,7 +18,6 @@ int muscal_ucvm_debug=0;
 FILE *stderrfp=NULL;
 
 int tooBig=0;
-int useBinary=1; 
 int _ON=0;
 
 /** The config of the model */
@@ -143,31 +142,23 @@ if(muscal_ucvm_debug){ fprintf(stderrfp,"\ncalling muscal_query with %d numpoint
     float *tmp_vs_buffer=NULL;
     float *tmp_rho_buffer=NULL;
 
-    float lon_f;
-    float lat_f;
-    float dep_f;
-    
-    int lon_idx, first_lon_idx;
-    int lat_idx, first_lat_idx;
-    int dep_idx, first_dep_idx;
+    int first_lon_idx;
+    int first_lat_idx;
+    int first_dep_idx;
 
     int same_lon_idx=1;
     int same_lat_idx=1;
     int same_dep_idx=1;
 
-    size_t *dep_idx_buffer;
-    size_t *lat_idx_buffer;
-    size_t *lon_idx_buffer;
+    int lon_idx;
+    int lat_idx;
+    int dep_idx;
 
     int offset;
 
-// hold the result
-    dep_idx_buffer = malloc(numpoints * sizeof(size_t));
-    if (!dep_idx_buffer) { fprintf(stderr, "malloc failed\n");}
-    lat_idx_buffer = malloc(numpoints * sizeof(size_t));
-    if (!lat_idx_buffer) { fprintf(stderr, "malloc failed\n");}
-    lon_idx_buffer = malloc(numpoints * sizeof(size_t));
-    if (!lon_idx_buffer) { fprintf(stderr, "malloc failed\n");}
+//  hold coord point's info
+    muscal_pt_info_t *pt_info = (muscal_pt_info_t  *) malloc(numpoints * sizeof(muscal_pt_info_t));
+    if (!pt_info) { fprintf(stderr, "pt_info: malloc failed\n");}
 
 // iterate through all the points and compose the buffers for all index
     for(int i=0; i<numpoints; i++) {
@@ -177,64 +168,56 @@ if(muscal_ucvm_debug){ fprintf(stderrfp,"\ncalling muscal_query with %d numpoint
         data[i].qp = -1;
         data[i].qs = -1;
 
-        lon_f=points[i].longitude;
-        lat_f=points[i].latitude;
-        dep_f=points[i].depth;
+        pt_info[i].lon=points[i].longitude;
+        pt_info[i].lat=points[i].latitude;
+        pt_info[i].dep=points[i].depth;
 
-if(muscal_ucvm_debug){ if(i<5) fprintf(stderrfp,"\nfirst %d, float lon/lat/dep = %f/%f/%f\n", i, lon_f, lat_f, dep_f); }
+        pt_info[i].lon_idx=find_buffer_idx(lon_list,nx,pt_info[i].lon);
+        pt_info[i].lat_idx=find_buffer_idx(lat_list,ny,pt_info[i].lat);
+        pt_info[i].dep_idx=find_buffer_idx(dep_list,nz,pt_info[i].dep);
 
-        lon_idx=find_buffer_idx((float *)lon_list,nx,lon_f);
-        lat_idx=find_buffer_idx((float *)lat_list,ny,lat_f);
-        dep_idx=find_buffer_idx((float *)dep_list,nz,dep_f);
-
-if(muscal_ucvm_debug){ if(i<5) fprintf(stderrfp,"    with idx lon/lat/dep = %d/%d/%d\n", lon_idx, lat_idx, dep_idx); }
+	/* check if out of range */
+	if(pt_info[i].lon_idx == -1 || pt_info[i].lat_idx == -1 || pt_info[i].dep_idx == -1) {
+          continue;
+        }
 
         if(i==0) {
-            first_dep_idx=dep_idx;
-            first_lon_idx=lon_idx;
-            first_lat_idx=lat_idx;
+            first_dep_idx=pt_info[i].dep_idx;
+            first_lon_idx=pt_info[i].lon_idx;
+            first_lat_idx=pt_info[i].lat_idx;
         }
-        dep_idx_buffer[i]=dep_idx;
-        lon_idx_buffer[i]=lon_idx;
-        lat_idx_buffer[i]=lat_idx;
 
-        if(dep_idx != first_dep_idx) same_dep_idx=0;
-        if(lon_idx != first_lon_idx) same_lon_idx=0;
-        if(lat_idx != first_lat_idx) same_lat_idx=0;
+        if(pt_info[i].dep_idx != first_dep_idx) same_dep_idx=0;
+        if(pt_info[i].lon_idx != first_lon_idx) same_lon_idx=0;
+        if(pt_info[i].lat_idx != first_lat_idx) same_lat_idx=0;
+
+
+	if(muscal_configuration->interp) { // fill cell percent
+            pt_info[i].lon_percent=find_cell_percent(lon_list,pt_info[i].lon,pt_info[i].lon_idx);
+            pt_info[i].lat_percent=find_cell_percent(lat_list,pt_info[i].lat,pt_info[i].lat_idx);
+            pt_info[i].dep_percent=find_cell_percent(dep_list,pt_info[i].dep,pt_info[i].dep_idx);
+        }
     }
-
-    int bucket_cnt=bucket_an_array(dep_idx_buffer, numpoints);
 
 // handle access 
 // if not tooBig, grab from in-memory buffer one at a time
 // if tooBig, then collect up all the index list and make just one call and
 // retrieve and disperse the result back into data
 
-    if(!tooBig) { 
+    if(!muscal_configuration->too_big) { 
 if(muscal_ucvm_debug){ fprintf(stderrfp,">> In-Memory access \n"); }
 
-// it is not too big, extract from data buffers one at a time
-        tmp_vp_buffer=dataset->vp_buffer;
-        tmp_vs_buffer=dataset->vs_buffer;
-        tmp_rho_buffer=dataset->rho_buffer;
-
+        // should be in the in-memory 
         for(int i=0; i<numpoints; i++) {
-            dep_idx=dep_idx_buffer[i];
-            lat_idx=lat_idx_buffer[i];
-            lon_idx=lon_idx_buffer[i];
-
-// offset= (dep_idx)*(lat_cnt * lon_cnt)+(lat_idx)*(lon_cnt)+lon_idx
-            offset= (dep_idx)*(ny * nx)+(lat_idx)*(nx)+lon_idx;
-
-if(muscal_ucvm_debug) { fprintf(stderrfp,"\nTarget offset %d : idx lon/lat/dep = %d/%d/%d\n", offset,lon_idx, lat_idx, dep_idx); }
-
-            data[i].vp = tmp_vp_buffer[offset];
-            data[i].vs = tmp_vs_buffer[offset];
-            data[i].rho =tmp_rho_buffer[offset];
+            if(!muscal_configuration->interpolation) { 
+		// no interp
+                get_one_property(dataset, &(pt_info[i]), &(data[i]));
+                } else {
+                    get_interp_property(dataset, &(pt_info[i]), &(data[i]));
+           }
         }
-    } else { 
 
-// special case, if numpoints < 5 just handle as random 
+    } else { 
 
 // it is too big, extract data from external data file 
 // group netcdf access to 
@@ -247,8 +230,7 @@ if(muscal_ucvm_debug) { fprintf(stderrfp,"\nTarget offset %d : idx lon/lat/dep =
 // it is depth profile
 //    extract the whole column with dataset->nz for different set 
 //    and then extract data from buffer one at a time using dep_idx 
-        if(numpoints > 5  && same_lon_idx && same_lat_idx ) {
-		 
+        if(same_lon_idx && same_lat_idx ) {
           // grab a col from cache
             muscal_cache_col_t *col=find_a_cache_col(dataset, first_lat_idx, first_lon_idx); 
 if(muscal_ucvm_debug){ fprintf(stderrfp,">> Using Col cache - %d\n", dataset->col_cache_cnt); }
@@ -258,8 +240,7 @@ if(muscal_ucvm_debug){ fprintf(stderrfp,">> Using Col cache - %d\n", dataset->co
             tmp_rho_buffer=col->col_rho_buffer;
 
             for(int i=0; i<numpoints; i++) { 
-                offset=dep_idx_buffer[i];
-
+                offset=pnt_info[i].dep_idx;
                 data[i].vp = tmp_vp_buffer[offset];
                 data[i].vs = tmp_vs_buffer[offset];
                 data[i].rho =tmp_rho_buffer[offset];
@@ -268,18 +249,18 @@ if(muscal_ucvm_debug){ fprintf(stderrfp,">> Using Col cache - %d\n", dataset->co
 // if just same_dep_idx, it is a horizontal slice,
 // extract the whole layer using dataset->nx and dataset->ny
 // and then extract data from buffer using lon_idx, and lat_idx
-        } else if (numpoints > 5 && same_dep_idx) { 
-          // grab a col from cache
+        } else if (same_dep_idx) { 
+          // grab a layer from cache or try to load it from external data file
             muscal_cache_layer_t *layer=find_a_cache_layer(dataset, first_dep_idx);
-if(muscal_ucvm_debug){ fprintf(stderrfp,">> Using Layer cache - %d\n", dataset->layer_cache_cnt); }
-          
+
+if(muscal_ucvm_debug){ fprintf(stderrfp,">> Using Layer cache - current count=%d\n", dataset->layer_cache_cnt); }
             tmp_vp_buffer=layer->layer_vp_buffer;
             tmp_vs_buffer=layer->layer_vs_buffer;
             tmp_rho_buffer=layer->layer_rho_buffer;
 
             for(int i=0; i<numpoints; i++) { 
-                lat_idx=lat_idx_buffer[i];
-                lon_idx=lon_idx_buffer[i];
+                lat_idx=pnt_info[i].lat_idx;
+                lon_idx=pnt_info[i].lon_idx;
                 offset= (lat_idx * nx) + lon_idx;
 
                 data[i].vp = tmp_vp_buffer[offset];
@@ -287,43 +268,16 @@ if(muscal_ucvm_debug){ fprintf(stderrfp,">> Using Layer cache - %d\n", dataset->
                 data[i].rho =tmp_rho_buffer[offset];
             }
         } else {  
-// a very special case,
-            if( _ON && bucket_cnt < MUSCAL_CACHE_LAYER_MAX) {	    
-if(muscal_ucvm_debug){ fprintf(stderrfp,">> Using special cache layer\n"); }
-if(muscal_ucvm_debug){ fprintf(stderrfp," BUCKET count is %d \n", bucket_cnt); }
-                int last_idx=-1;
-		muscal_cache_layer_t *last_layer=NULL;
-		muscal_cache_layer_t *layer=NULL;
-                for(int i=0; i<numpoints; i++) { 
-                    lat_idx=lat_idx_buffer[i];
-                    lon_idx=lon_idx_buffer[i];
-                    dep_idx=dep_idx_buffer[i];
-                    if(layer == NULL) {
-		        layer=find_a_cache_layer(dataset, dep_idx);
-                    } else if (last_idx == dep_idx) { 
-                        layer = last_layer;
-                    } else { // there is a layer switch
-		        layer=find_a_cache_layer(dataset, dep_idx);
-                    }
-		    last_layer = layer;
-		    last_idx=dep_idx;
-
-                    offset= (lat_idx * nx) + lon_idx;
-                    data[i].vp = (layer->layer_vp_buffer)[offset];
-                    data[i].vs = (layer->layer_vs_buffer)[offset];
-                    data[i].rho = (layer->layer_rho_buffer)[offset];
-	        }
-                } else {
+// a very special case, it is random target ie. a vertical slice 
 // handle it as random and so just default to per location access
 if(muscal_ucvm_debug){ fprintf(stderrfp,">> Using random call \n"); }
-                    for(int i=0; i<numpoints; i++) { 
-                        lat_idx=lat_idx_buffer[i];
-                        lon_idx=lon_idx_buffer[i];
-                        dep_idx=dep_idx_buffer[i];
-                        data[i].vp=get_nc_vara_float(dataset->ncid, dataset->vp_varid, dep_idx, lat_idx, lon_idx);
-                        data[i].vs=get_nc_vara_float(dataset->ncid, dataset->vs_varid, dep_idx, lat_idx, lon_idx);
-                        data[i].rho=get_nc_vara_float(dataset->ncid, dataset->rho_varid, dep_idx, lat_idx, lon_idx);
-	                }
+            for(int i=0; i<numpoints; i++) { 
+                lon_idx=pnt_info[i].lon_idx;
+                lat_idx=pnt_info[i].lat_idx;
+                dep_idx=pnt_info[i].dep_idx;
+                data[i].vp=get_nc_vara_float(dataset->ncid, dataset->vp_varid, dep_idx, lat_idx, lon_idx);
+                data[i].vs=get_nc_vara_float(dataset->ncid, dataset->vs_varid, dep_idx, lat_idx, lon_idx);
+                data[i].rho=get_nc_vara_float(dataset->ncid, dataset->rho_varid, dep_idx, lat_idx, lon_idx);
             }
          }
     }
@@ -421,8 +375,7 @@ int muscal_read_configuration(char *file, muscal_configuration_t *config) {
     // Read the lines in the muscal_configuration file.
     while (fgets(line_holder, sizeof(line_holder), fp) != NULL) {
         if (line_holder[0] != '#' && line_holder[0] != ' ' && line_holder[0] != '\n') {
-
-         _splitline(line_holder, key, value);
+            _splitline(line_holder, key, value);
 
             // Which variable are we editing?
             if (strcmp(key, "utm_zone") == 0) config->utm_zone = atoi(value);
@@ -431,15 +384,21 @@ int muscal_read_configuration(char *file, muscal_configuration_t *config) {
                 config->interpolation=0;
                 if (strcmp(value,"on") == 0) config->interpolation=1;
             }
+            if (strcmp(key, "use_binary") == 0) { 
+                config->use_binary=0;
+                if (strcmp(value,"on") == 0) config->use_binary=1;
+            }
+            if (strcmp(key, "too_big") == 0) { 
+                config->too_big=0;
+                if (strcmp(value,"on") == 0) config->too_big=1;
+            }
          /* for each dataset, allocate a model dataset's block and fill in */ 
             if (strcmp(key, "data_file") == 0) { 
                 if( config->dataset_cnt < MUSCAL_DATASET_MAX) {
-              int rc=_setup_a_dataset(config,value);
-                 if(rc == 1 ) { config->dataset_cnt++; }
-                    } else {
-                        muscal_print_error("Exceeded dataset maximum limit.");
-                }
-            }
+                  int rc=_setup_a_dataset(config,value);
+                  if(rc == 1 ) { config->dataset_cnt++; }
+                } else { muscal_print_error("Exceeded dataset maximum limit."); }
+	    } 
         }
     }
 
@@ -533,7 +492,7 @@ int muscal_read_model(muscal_configuration_t *config, muscal_model_t *model, cha
 
     int max_idx=model->dataset_cnt; // how many datasets are there
     for(int i=0; i<max_idx;i++) { 
-        muscal_dataset_t *data=make_a_muscal_dataset(datadir, config->dataset_files[i], tooBig, useBinary); 
+        muscal_dataset_t *data=make_a_muscal_dataset(datadir, config->dataset_files[i], config->too_big, config->use_binary); 
 // put into the velocity model
         model->datasets[i]=data;
     }
@@ -596,7 +555,7 @@ void muscal_print_error(char *err) {
  * allowable by a INT variable)
  *
  */
-static int too_big(muscal_dataset_t *dataset) {
+static int data_too_big(muscal_dataset_t *dataset) {
     long max_size= (long) (dataset->nx) * dataset->ny * dataset->nz;
     long delta= max_size - INT_MAX;
 

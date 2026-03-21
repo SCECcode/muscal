@@ -361,7 +361,8 @@ float *get_binary_float_buffer(const char *datadir, char *datafile, int total) {
     return buffer;
 }
 
-int find_buffer_idx(float *buffer, size_t nelems, float target) {
+// find nearest buffer idx even it it is over it
+int find_nearest_buffer_idx(float *buffer, size_t nelems, float target) {
     size_t lo = 0, hi = nelems; // search in [lo, hi)
     while (lo < hi) {
         size_t mid = lo + (hi - lo) / 2;
@@ -387,6 +388,26 @@ int find_buffer_idx(float *buffer, size_t nelems, float target) {
 
     int idx=(fabsf(left - target) <= fabsf(right - target)) ? (int)(lo - 1) : (int)lo;
     return idx;
+}
+
+// find  lowest array value that is lower than target
+int find_buffer_idx(float *buffer, size_t nelems, float target) {
+{
+    if (target < buffer[0] || target > buffer[n - 1]) return -1;
+    int lo = 0, hi = nelems - 2;
+    while (lo < hi) {
+        int mid = (lo + hi + 1) / 2;
+        if (buffer[mid] <= target) lo = mid;
+        else               hi = mid - 1;
+    }
+    return lo;
+}
+
+// find the percent of target [0-1] within the cell
+float find_cell_percent(float *buffer, float target, int idx) {
+
+    float percent=(target- buffer[target])/(buffer[i+1]-buffer[i]);
+    return percent;
 }
 
 

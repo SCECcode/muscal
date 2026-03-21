@@ -26,10 +26,12 @@ int get_nc_var(int ncid, int varid, nc_type *vtype, int *ndims, int **dimids, si
 int print_nc_buffer_offset(nc_type vtype, int offset, void *buffer);
 void *get_nc_buffer(int ncid, char *varname, const char *path, nc_type *vtype, size_t *nelems, int e_dimlens);
 float *get_nc_float_buffer(int ncid, char *varname, const char *path, nc_type *vtype, size_t *nelems, int e_dimlens);
+float get_nc_vara_float(int ncid, int varid, int dep_idx, int lat_idx, int lon_idx);
+
 float *get_binary_float_buffer(const char *path, char *datafile, int total);
 
 int find_buffer_idx(float *buffer, size_t nelems, float target);
-float get_nc_vara_float(int ncid, int varid, int dep_idx, int lat_idx, int lon_idx);
+float find_cell_percent(float *buffer, float target, int idx);
 
 int cache_depth_col_float(int ncid, int varid,
                 size_t ndepth, size_t lat_idx, size_t lon_idx,
