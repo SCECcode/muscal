@@ -406,7 +406,7 @@ int find_buffer_idx(float *buffer, size_t nelems, float target) {
 // find the percent of target [0-1] within the cell
 float find_cell_percent(float *buffer, float target, int idx) {
 
-    float percent=(target- buffer[target])/(buffer[i+1]-buffer[i]);
+    float percent=(target - buffer[idx])/(buffer[idx+1]-buffer[idx]);
     return percent;
 }
 

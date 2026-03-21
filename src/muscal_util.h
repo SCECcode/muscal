@@ -89,7 +89,7 @@ void free_a_cach_col(muscal_cache_col_t *col);
 muscal_cache_layer_t *find_a_cache_layer(muscal_dataset_t *dataset, int target_dep_idx);
 void free_a_cache_layer(muscal_cache_layer_t *layer);
 
-void get_one_property(muscal_dataset_t *dataset, pt_info *pt, muscal_properties_t *data);
+int get_one_property(muscal_dataset_t *dataset, pt_info *pt, muscal_properties_t *data);
 void get_interp_property(muscal_dataset_t *dataset, pt_info *pt, muscal_properties_t *data);
 
 

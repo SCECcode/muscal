@@ -111,7 +111,7 @@ int free_muscal_dataset(muscal_dataset_t *data) {
 }
 
 /**** straight or trilinear/bilinear ****/
-void get_one_property(muscal_dataset_t *dataset, pt_info *pt, muscal_properties_t *data) {
+int get_one_property(muscal_dataset_t *dataset, pt_info *pt, muscal_properties_t *data) {
 
     int nx=dataset->nx;
     int ny=dataset->ny;
@@ -132,9 +132,13 @@ void get_one_property(muscal_dataset_t *dataset, pt_info *pt, muscal_properties_
     data.vp=vp_buffer[offset];
     data.vs=vs_buffer[offset];
     data.rho=rho_buffer[offset];
+    return offset;
 }
 
 void get_interp_property(muscal_dataset_t *dataset, pt_info *pt, muscal_properties_t *data) {
+	// XXX
+
+	return;
 }
 
 
