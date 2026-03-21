@@ -392,8 +392,7 @@ int find_nearest_buffer_idx(float *buffer, size_t nelems, float target) {
 
 // find  lowest array value that is lower than target
 int find_buffer_idx(float *buffer, size_t nelems, float target) {
-{
-    if (target < buffer[0] || target > buffer[n - 1]) return -1;
+    if (target < buffer[0] || target > buffer[nelems - 1]) return -1;
     int lo = 0, hi = nelems - 2;
     while (lo < hi) {
         int mid = (lo + hi + 1) / 2;

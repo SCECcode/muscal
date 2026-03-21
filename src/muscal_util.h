@@ -11,6 +11,8 @@
 #define MUSCAL_CACHE_LAYER_MAX 20
 #define MUSCAL_CACHE_COL_MAX 10
 
+typedef struct muscal_properties_t muscal_properties_t;
+
 typedef struct muscal_cache_layer_t {
      int cache_layer_dep_idx;
      float *layer_vp_buffer; // nx * ny
@@ -79,18 +81,18 @@ typedef struct muscal_pt_info_t {
 	float lon_percent;
 	float lat_percent;
 	float dep_percent;
-} muscal_pt_info_t
+} muscal_pt_info_t;
 
 /* utilitie functions */
 muscal_dataset_t *make_a_muscal_dataset(char *datadir, char *datafile, int tooBig, int useBinary);
 int free_muscal_dataset(muscal_dataset_t *data);
 muscal_cache_col_t *find_a_cache_col(muscal_dataset_t *dataset, int target_lat_idx, int target_lon_idx);
-void free_a_cach_col(muscal_cache_col_t *col);
+void free_a_cache_col(muscal_cache_col_t *col);
 muscal_cache_layer_t *find_a_cache_layer(muscal_dataset_t *dataset, int target_dep_idx);
 void free_a_cache_layer(muscal_cache_layer_t *layer);
 
-int get_one_property(muscal_dataset_t *dataset, pt_info *pt, muscal_properties_t *data);
-void get_interp_property(muscal_dataset_t *dataset, pt_info *pt, muscal_properties_t *data);
+int get_one_property(muscal_dataset_t *dataset, muscal_pt_info_t *pt, muscal_properties_t *data);
+void get_interp_property(muscal_dataset_t *dataset, muscal_pt_info_t *pt, muscal_properties_t *data);
 
 
 #endif

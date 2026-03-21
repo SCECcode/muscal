@@ -111,7 +111,7 @@ int free_muscal_dataset(muscal_dataset_t *data) {
 }
 
 /**** straight or trilinear/bilinear ****/
-int get_one_property(muscal_dataset_t *dataset, pt_info *pt, muscal_properties_t *data) {
+int get_one_property(muscal_dataset_t *dataset, muscal_pt_info_t *pt, muscal_properties_t *data) {
 
     int nx=dataset->nx;
     int ny=dataset->ny;
@@ -123,19 +123,19 @@ int get_one_property(muscal_dataset_t *dataset, pt_info *pt, muscal_properties_t
 
     int x_idx=pt->lon_idx;
     int y_idx=pt->lat_idx;
-    int z_idx=pt->rho_idx;
+    int z_idx=pt->dep_idx;
 
     int offset= (z_idx)*(ny * nx)+(y_idx)*(nx)+x_idx;
 
-    if(muscal_ucvm_debug) { fprintf(stderrfp,"\nTarget offset %d : idx lon/lat/dep = %d/%d/%d\n", offset,lon_idx, lat_idx, dep_idx); }
+    if(muscal_ucvm_debug) { fprintf(stderrfp,"\nTarget offset %d : idx lon/lat/dep = %d/%d/%d\n", offset,x_idx, y_idx, z_idx); }
 
-    data.vp=vp_buffer[offset];
-    data.vs=vs_buffer[offset];
-    data.rho=rho_buffer[offset];
+    data->vp=vp_buffer[offset];
+    data->vs=vs_buffer[offset];
+    data->rho=rho_buffer[offset];
     return offset;
 }
 
-void get_interp_property(muscal_dataset_t *dataset, pt_info *pt, muscal_properties_t *data) {
+void get_interp_property(muscal_dataset_t *dataset, muscal_pt_info_t *pt, muscal_properties_t *data) {
 	// XXX
 
 	return;

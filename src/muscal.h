@@ -74,6 +74,8 @@ typedef struct muscal_configuration_t {
 	int interpolation;
 	/** use_binary on or off (1 or 0) */
 	int use_binary;
+	/** too_big on or off (1 or 0) */
+	int too_big;
 
         /* how many datasets are in the model */
         int dataset_cnt;

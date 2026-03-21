@@ -192,7 +192,7 @@ if(muscal_ucvm_debug){ fprintf(stderrfp,"\ncalling muscal_query with %d numpoint
         if(pt_info[i].lat_idx != first_lat_idx) same_lat_idx=0;
 
 
-	if(muscal_configuration->interp) { // fill cell percent
+	if(muscal_configuration->interpolation) { // fill cell percent
             pt_info[i].lon_percent=find_cell_percent(lon_list,pt_info[i].lon,pt_info[i].lon_idx);
             pt_info[i].lat_percent=find_cell_percent(lat_list,pt_info[i].lat,pt_info[i].lat_idx);
             pt_info[i].dep_percent=find_cell_percent(dep_list,pt_info[i].dep,pt_info[i].dep_idx);
@@ -240,7 +240,7 @@ if(muscal_ucvm_debug){ fprintf(stderrfp,">> Using Col cache - %d\n", dataset->co
             tmp_rho_buffer=col->col_rho_buffer;
 
             for(int i=0; i<numpoints; i++) { 
-                offset=pnt_info[i].dep_idx;
+                offset=pt_info[i].dep_idx;
                 data[i].vp = tmp_vp_buffer[offset];
                 data[i].vs = tmp_vs_buffer[offset];
                 data[i].rho =tmp_rho_buffer[offset];
@@ -259,8 +259,8 @@ if(muscal_ucvm_debug){ fprintf(stderrfp,">> Using Layer cache - current count=%d
             tmp_rho_buffer=layer->layer_rho_buffer;
 
             for(int i=0; i<numpoints; i++) { 
-                lat_idx=pnt_info[i].lat_idx;
-                lon_idx=pnt_info[i].lon_idx;
+                lat_idx=pt_info[i].lat_idx;
+                lon_idx=pt_info[i].lon_idx;
                 offset= (lat_idx * nx) + lon_idx;
 
                 data[i].vp = tmp_vp_buffer[offset];
@@ -272,9 +272,9 @@ if(muscal_ucvm_debug){ fprintf(stderrfp,">> Using Layer cache - current count=%d
 // handle it as random and so just default to per location access
 if(muscal_ucvm_debug){ fprintf(stderrfp,">> Using random call \n"); }
             for(int i=0; i<numpoints; i++) { 
-                lon_idx=pnt_info[i].lon_idx;
-                lat_idx=pnt_info[i].lat_idx;
-                dep_idx=pnt_info[i].dep_idx;
+                lon_idx=pt_info[i].lon_idx;
+                lat_idx=pt_info[i].lat_idx;
+                dep_idx=pt_info[i].dep_idx;
                 data[i].vp=get_nc_vara_float(dataset->ncid, dataset->vp_varid, dep_idx, lat_idx, lon_idx);
                 data[i].vs=get_nc_vara_float(dataset->ncid, dataset->vs_varid, dep_idx, lat_idx, lon_idx);
                 data[i].rho=get_nc_vara_float(dataset->ncid, dataset->rho_varid, dep_idx, lat_idx, lon_idx);
