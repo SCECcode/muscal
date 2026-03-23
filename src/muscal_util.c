@@ -111,34 +111,78 @@ int free_muscal_dataset(muscal_dataset_t *data) {
 }
 
 /**** straight or trilinear/bilinear ****/
-int get_one_property(muscal_dataset_t *dataset, muscal_pt_info_t *pt, muscal_properties_t *data) {
-
+int _buffer_offset(muscal_dataset_t * dataset, int x_idx, int  y_idx, int z_idx) {
     int nx=dataset->nx;
     int ny=dataset->ny;
     int nz=dataset->nz;
 
-    float *vp_buffer=dataset->vp_buffer;
-    float *vs_buffer=dataset->vs_buffer;
-    float *rho_buffer=dataset->rho_buffer;
-
-    int x_idx=pt->lon_idx;
-    int y_idx=pt->lat_idx;
-    int z_idx=pt->dep_idx;
-
     int offset= (z_idx)*(ny * nx)+(y_idx)*(nx)+x_idx;
-
     if(muscal_ucvm_debug) { fprintf(stderrfp,"\nTarget offset %d : idx lon/lat/dep = %d/%d/%d\n", offset,x_idx, y_idx, z_idx); }
 
-    data->vp=vp_buffer[offset];
-    data->vs=vs_buffer[offset];
-    data->rho=rho_buffer[offset];
     return offset;
 }
 
-void get_interp_property(muscal_dataset_t *dataset, muscal_pt_info_t *pt, muscal_properties_t *data) {
-	// XXX
+int get_one_property(muscal_dataset_t *dataset, muscal_pt_info_t *pt, muscal_properties_t *data) {
+    int offset= _buffer_offset(dataset, pt->lon_idx, pt->lat_idx, pt->dep_idx);
 
-	return;
+    data->vp=dataset->vp_buffer[offset];
+    data->vs=dataset->vs_buffer[offset];
+    data->rho=dataset->rho_buffer[offset];
+    return offset;
+}
+
+
+float _interp_a_point(muscal_dataset_t *dataset, float *buffer, muscal_pt_info_t *pt) {
+    int lon_idx=pt->lon_idx;
+    int lat_idx=pt->lat_idx;
+    int dep_idx=pt->dep_idx;
+    float lon_percent=pt->lon_percent;
+    float lat_percent=pt->lat_percent;
+    float dep_percent=pt->dep_percent;
+
+    if(pt->dep_idx == 0 ) {
+
+        if(muscal_ucvm_debug) { fprintf(stderrfp,"\nInterp the last layer\n"); }
+        // Get the four offsets
+        float val0= buffer[_buffer_offset(dataset,lon_idx,lat_idx,dep_idx)];      // x,    y, z
+        float val1= buffer[_buffer_offset(dataset,lon_idx+1,lat_idx,dep_idx)];    // x+1,  y, z 
+        float val2= buffer[_buffer_offset(dataset,lon_idx,lat_idx+1,dep_idx)];    // x,  y+1, z 
+        float val3= buffer[_buffer_offset(dataset,lon_idx+1,lat_idx+1,dep_idx)];  // x+1,y+1, z
+
+        float val00= val0 * (1-lat_percent) + val1 * lat_percent;    
+        float val22= val2 * (1-lat_percent) + val3 * lat_percent;    
+
+        float val000 = val00 * (1-lon_percent) + val22 * lon_percent;
+        return val000;
+        } else {
+            float val0= buffer[_buffer_offset(dataset,lon_idx,lat_idx,dep_idx)];      // x,    y, z
+            float val1= buffer[_buffer_offset(dataset,lon_idx+1,lat_idx,dep_idx)];    // x+1,  y, z 
+            float val2= buffer[_buffer_offset(dataset,lon_idx,lat_idx+1,dep_idx)];    // x,  y+1, z 
+            float val3= buffer[_buffer_offset(dataset,lon_idx+1,lat_idx+1,dep_idx)];  // x+1,y+1, z
+            float val4= buffer[_buffer_offset(dataset,lon_idx,lat_idx,dep_idx-1)];    // x,    y, z-1
+            float val5= buffer[_buffer_offset(dataset,lon_idx+1,lat_idx,dep_idx-1)];  // x+1,  y, z-1
+            float val6= buffer[_buffer_offset(dataset,lon_idx,lat_idx+1,dep_idx-1)];  // x,  y+1, z-1
+            float val7= buffer[_buffer_offset(dataset,lon_idx+1,lat_idx+1,dep_idx-1)];// x+1,y+1, z-1
+        
+            float val00= val0 * (1-lat_percent) + val1 * lat_percent;    
+            float val11= val4 * (1-lat_percent) + val5 * lat_percent;    
+            float val22= val2 * (1-lat_percent) + val3 * lat_percent;    
+            float val33= val6 * (1-lat_percent) + val7 * lat_percent;    
+
+            float val000 = val00 * (1-lon_percent) + val22 * lon_percent;
+            float val111 = val11 * (1-lon_percent) + val33 * lon_percent;
+
+            float val0000 = val000 * (1-dep_percent) + val111 * dep_percent;
+            return val0000;
+    }
+}
+
+void get_interp_property(muscal_dataset_t *dataset, muscal_pt_info_t *pt, muscal_properties_t *data) {
+
+    data->vp = _interp_a_point(dataset, dataset->vp_buffer, pt);
+    data->vs = _interp_a_point(dataset, dataset->vs_buffer, pt);
+    data->rho = _interp_a_point(dataset, dataset->rho_buffer, pt);
+    return;
 }
 
 

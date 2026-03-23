@@ -191,7 +191,6 @@ if(muscal_ucvm_debug){ fprintf(stderrfp,"\ncalling muscal_query with %d numpoint
         if(pt_info[i].lon_idx != first_lon_idx) same_lon_idx=0;
         if(pt_info[i].lat_idx != first_lat_idx) same_lat_idx=0;
 
-
 	if(muscal_configuration->interpolation) { // fill cell percent
             pt_info[i].lon_percent=find_cell_percent(lon_list,pt_info[i].lon,pt_info[i].lon_idx);
             pt_info[i].lat_percent=find_cell_percent(lat_list,pt_info[i].lat,pt_info[i].lat_idx);
