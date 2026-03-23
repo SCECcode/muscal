@@ -381,7 +381,7 @@ int muscal_read_configuration(char *file, muscal_configuration_t *config) {
                 config->interpolation=0;
                 if (strcmp(value,"on") == 0) config->interpolation=1;
             }
-            if (strcmp(key, "use_binary") == 0) { 
+            if (strcmp(key, "binary_data") == 0) { 
                 config->use_binary=0;
                 if (strcmp(value,"on") == 0) config->use_binary=1;
             }

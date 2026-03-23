@@ -67,10 +67,12 @@ muscal_dataset_t *make_a_muscal_dataset(char *datadir, char *datafile, int tooBi
         int total= data->nx * data->ny * data->nz;
 
 	if(!useBinary) {
+            if(muscal_ucvm_debug) { fprintf(stderrfp, " import USING netcdf data files\n"); }
             data->vp_buffer=get_nc_float_buffer(data->ncid, "vp", filepath, &vtype, &nelems, 3);
             data->vs_buffer=get_nc_float_buffer(data->ncid, "vs", filepath, &vtype, &nelems, 3);
             data->rho_buffer=get_nc_float_buffer(data->ncid, "rho", filepath, &vtype, &nelems, 3);
 	    } else {
+                if(muscal_ucvm_debug) { fprintf(stderrfp, " import USING binary data files\n"); }
                 data->vp_buffer = get_binary_float_buffer(datadir, "vp.dat", total);
                 data->vs_buffer = get_binary_float_buffer(datadir, "vs.dat", total);
                 data->rho_buffer = get_binary_float_buffer(datadir, "rho.dat", total);
