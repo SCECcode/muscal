@@ -17,7 +17,6 @@
 int muscal_ucvm_debug=0;
 FILE *stderrfp=NULL;
 
-int tooBig=0;
 int _ON=0;
 
 /** The config of the model */
@@ -93,8 +92,7 @@ int muscal_init(const char *dir, const char *label) {
 
     if (tempVal == SUCCESS) {
       if(muscal_ucvm_debug) {
-        fprintf(stderrfp, "WARNING: Could not load model into memory. Reading the model from the\n");
-        fprintf(stderrfp, "hard disk may result in slow performance.\n");
+        fprintf(stderrfp, "Setup model file\n");
       }
     } else if (tempVal == FAIL) {
         muscal_print_error("No model file was found to read from.");
@@ -199,8 +197,8 @@ if(muscal_ucvm_debug){ fprintf(stderrfp,"\ncalling muscal_query with %d numpoint
     }
 
 // handle access 
-// if not tooBig, grab from in-memory buffer one at a time
-// if tooBig, then collect up all the index list and make just one call and
+// if not too_big, grab from in-memory buffer one at a time
+// if too_big, then collect up all the index list and make just one call and
 // retrieve and disperse the result back into data
 
     if(!muscal_configuration->too_big) { 

@@ -179,8 +179,11 @@ float _interp_a_point(muscal_dataset_t *dataset, float *buffer, muscal_pt_info_t
 
 void get_interp_property(muscal_dataset_t *dataset, muscal_pt_info_t *pt, muscal_properties_t *data) {
 
+    if(muscal_ucvm_debug) { fprintf(stderrfp,"\nInterp PROCESSING for vp\n"); }
     data->vp = _interp_a_point(dataset, dataset->vp_buffer, pt);
+    if(muscal_ucvm_debug) { fprintf(stderrfp,"\nInterp PROCESSING for vs\n"); }
     data->vs = _interp_a_point(dataset, dataset->vs_buffer, pt);
+    if(muscal_ucvm_debug) { fprintf(stderrfp,"\nInterp PROCESSING for rho\n"); }
     data->rho = _interp_a_point(dataset, dataset->rho_buffer, pt);
     return;
 }
