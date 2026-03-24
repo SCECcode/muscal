@@ -1,9 +1,13 @@
+#!/usr/bin/env bash
 
-#g++ -c dependencies/alglib-cpp/src/interpolation.cpp -o interpolation.o
-g++ -Idependencies/alglib-cpp/src -c alglib_rbf_wrapper.cpp -o alglib_rbf_wrapper.cpp.o
-#ar rcs libalglib.a interpolation.o alglib_rbf_wrapper.o
+SECONDS=0
+out=$( { time ucvm_query -m muscal -f $UCVM_INSTALL_PATH/conf/ucvm.conf < MSCAL_test_points_deep.txt > MSCAL_test_points_deep.final ; } 2>&1 )
+echo "$out" >> MSCAL_test_points_deep.final
+echo "Elapsed: ${SECONDS}s" >> MSCAL_test_points_deep.final
 
-gcc -Idependencies/alglib-cpp/src use_alglib.c -o use_alglib.o
 
-#g++ use_alglib.o rbf_wrapper.o -L. -lalglib -o rbf_app
+SECONDS=0
+out=$( { time ucvm_query -m muscal -f $UCVM_INSTALL_PATH/conf/ucvm.conf < MSCAL_test_points_shallow.txt > MSCAL_test_points_shallow.final ; } 2>&1 )
+echo "$out" >> MSCAL_test_points_shallow.final
+echo "Elapsed: ${SECONDS}s" >> MSCAL_test_points_shallow.final
 

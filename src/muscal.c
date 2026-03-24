@@ -14,7 +14,7 @@
 #include "um_netcdf.h"
 #include "cJSON.h"
 
-int muscal_ucvm_debug=0;
+int muscal_ucvm_debug=1;
 FILE *stderrfp=NULL;
 
 int _ON=0;
@@ -216,6 +216,7 @@ if(muscal_ucvm_debug){ fprintf(stderrfp,">> In-Memory access \n"); }
 
     } else { 
 
+if(muscal_ucvm_debug){ fprintf(stderrfp,">> External-File access \n"); }
 // it is too big, extract data from external data file 
 // group netcdf access to 
 //   column based(same lat idx an same lon idx),
