@@ -14,7 +14,7 @@
 #include "um_netcdf.h"
 #include "cJSON.h"
 
-int muscal_ucvm_debug=1;
+int muscal_ucvm_debug=0;
 FILE *stderrfp=NULL;
 
 int _ON=0;
