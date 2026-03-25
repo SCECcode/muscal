@@ -14,7 +14,7 @@
 #include "um_netcdf.h"
 #include "cJSON.h"
 
-int muscal_ucvm_debug=1;
+int muscal_ucvm_debug=0;
 FILE *stderrfp=NULL;
 
 int _ON=0;
@@ -202,7 +202,8 @@ if(muscal_ucvm_debug){ fprintf(stderrfp,"\ncalling muscal_query with %d numpoint
 // retrieve and disperse the result back into data
 
     if(!muscal_configuration->too_big) { 
-if(muscal_ucvm_debug){ fprintf(stderrfp,">> In-Memory access \n"); }
+
+if(muscal_ucvm_debug){ fprintf(stderrfp,">> Using In-Memory access \n"); }
 
         // should be in the in-memory 
         for(int i=0; i<numpoints; i++) {
@@ -216,8 +217,11 @@ if(muscal_ucvm_debug){ fprintf(stderrfp,">> In-Memory access \n"); }
 
     } else { 
 
-if(muscal_ucvm_debug){ fprintf(stderrfp,">> External-File access \n"); }
-// it is too big, extract data from external data file 
+//
+// WARNING : no interpolation is done, for MUSCAL, THIS SHOULD NOT BE USED 
+// EXCEPT FOR TESTING
+//
+// It is too big, extract data from external data file 
 // group netcdf access to 
 //   column based(same lat idx an same lon idx),
 //   or
@@ -231,7 +235,7 @@ if(muscal_ucvm_debug){ fprintf(stderrfp,">> External-File access \n"); }
         if(same_lon_idx && same_lat_idx ) {
           // grab a col from cache
             muscal_cache_col_t *col=find_a_cache_col(dataset, first_lat_idx, first_lon_idx); 
-if(muscal_ucvm_debug){ fprintf(stderrfp,">> Using Col cache - %d\n", dataset->col_cache_cnt); }
+if(muscal_ucvm_debug){ fprintf(stderrfp,">> Using External data/Col cache - col idx=%d\n", dataset->col_cache_cnt); }
           
             tmp_vp_buffer=col->col_vp_buffer;
             tmp_vs_buffer=col->col_vs_buffer;
@@ -251,7 +255,7 @@ if(muscal_ucvm_debug){ fprintf(stderrfp,">> Using Col cache - %d\n", dataset->co
           // grab a layer from cache or try to load it from external data file
             muscal_cache_layer_t *layer=find_a_cache_layer(dataset, first_dep_idx);
 
-if(muscal_ucvm_debug){ fprintf(stderrfp,">> Using Layer cache - current count=%d\n", dataset->layer_cache_cnt); }
+if(muscal_ucvm_debug){ fprintf(stderrfp,">> Using External data/Layer cache - current count=%d\n", dataset->layer_cache_cnt); }
             tmp_vp_buffer=layer->layer_vp_buffer;
             tmp_vs_buffer=layer->layer_vs_buffer;
             tmp_rho_buffer=layer->layer_rho_buffer;
@@ -268,7 +272,7 @@ if(muscal_ucvm_debug){ fprintf(stderrfp,">> Using Layer cache - current count=%d
         } else {  
 // a very special case, it is random target ie. a vertical slice 
 // handle it as random and so just default to per location access
-if(muscal_ucvm_debug){ fprintf(stderrfp,">> Using random call \n"); }
+if(muscal_ucvm_debug){ fprintf(stderrfp,">> Using External data/Random call \n"); }
             for(int i=0; i<numpoints; i++) { 
                 lon_idx=pt_info[i].lon_idx;
                 lat_idx=pt_info[i].lat_idx;
@@ -372,6 +376,7 @@ int muscal_read_configuration(char *file, muscal_configuration_t *config) {
 
     // Read the lines in the muscal_configuration file.
     while (fgets(line_holder, sizeof(line_holder), fp) != NULL) {
+
         if (line_holder[0] != '#' && line_holder[0] != ' ' && line_holder[0] != '\n') {
             _splitline(line_holder, key, value);
 
@@ -380,15 +385,21 @@ int muscal_read_configuration(char *file, muscal_configuration_t *config) {
             if (strcmp(key, "model_dir") == 0) sprintf(config->model_dir, "%s", value);
             if (strcmp(key, "interpolation") == 0) { 
                 config->interpolation=0;
-                if (strcmp(value,"on") == 0) config->interpolation=1;
+                if (strcmp(value,"on") == 0) { config->interpolation=1;
+if(muscal_ucvm_debug){ fprintf(stderrfp, "enabled Interpolation\n"); }
+                }
             }
             if (strcmp(key, "binary_data") == 0) { 
                 config->use_binary=0;
-                if (strcmp(value,"on") == 0) config->use_binary=1;
+                if (strcmp(value,"on") == 0) { config->use_binary=1;
+if(muscal_ucvm_debug){ fprintf(stderrfp, "enabled Binary data\n"); }
+                }
             }
             if (strcmp(key, "too_big") == 0) { 
                 config->too_big=0;
-                if (strcmp(value,"on") == 0) config->too_big=1;
+                if (strcmp(value,"on") == 0) { config->too_big=1;
+if(muscal_ucvm_debug){ fprintf(stderrfp, "enabled tooBig -- use external data access\n"); }
+                }
             }
          /* for each dataset, allocate a model dataset's block and fill in */ 
             if (strcmp(key, "data_file") == 0) { 

@@ -6,7 +6,7 @@ model_dir = muscal
 model_data_path = https://g-3a9041.a78b8.36fe.data.globus.org/ucvm/models
 
 # set this if netcdf data is too big to load in memory, use nc_FUNCTIONS to access
-too_big = on
+too_big = off
 
 # interpolation only works when using in-memory data access (too_big == off)
 interpolation = on 

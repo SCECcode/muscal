@@ -392,12 +392,15 @@ int find_nearest_buffer_idx(float *buffer, size_t nelems, float target) {
 
 // find  lowest array value that is lower than target
 int find_buffer_idx(float *buffer, size_t nelems, float target) {
+    if (nelems < 2) return -1;
     if (target < buffer[0] || target > buffer[nelems - 1]) return -1;
     int lo = 0, hi = nelems - 2;
     while (lo < hi) {
         int mid = (lo + hi + 1) / 2;
-        if (buffer[mid] <= target) lo = mid;
-        else               hi = mid - 1;
+        if (buffer[mid] <= target) 
+          lo = mid;
+        else
+          hi = mid - 1;
     }
     return lo;
 }
@@ -429,8 +432,8 @@ return val;
 // dep profile = one lat-idx, one lon-idx,  z varies
 //
 int cache_depth_col_float(int ncid, int varid, 
-		size_t ndepth, size_t lat_idx, size_t lon_idx,
-                float *col /* size >= ndepth */) {
+    size_t ndepth, size_t lat_idx, size_t lon_idx,
+    float *col /* size >= ndepth */) {
 
     size_t start[3] = {0, lat_idx, lon_idx};
     size_t count[3] = {ndepth, 1, 1};
