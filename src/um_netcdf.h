@@ -31,6 +31,7 @@ float get_nc_vara_float(int ncid, int varid, int dep_idx, int lat_idx, int lon_i
 float *get_binary_float_buffer(const char *path, char *datafile, int total);
 
 int find_buffer_idx(float *buffer, size_t nelems, float target);
+int find_buffer_idx_clamped(float *buffer, size_t nelems, float target);
 float find_cell_percent(float *buffer, float target, int idx);
 
 int cache_depth_col_float(int ncid, int varid,

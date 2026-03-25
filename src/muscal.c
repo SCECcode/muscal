@@ -170,12 +170,12 @@ if(muscal_ucvm_debug){ fprintf(stderrfp,"\ncalling muscal_query with %d numpoint
         pt_info[i].lat=points[i].latitude;
         pt_info[i].dep=points[i].depth;
 
-        pt_info[i].lon_idx=find_buffer_idx(lon_list,nx,pt_info[i].lon);
-        pt_info[i].lat_idx=find_buffer_idx(lat_list,ny,pt_info[i].lat);
-        pt_info[i].dep_idx=find_buffer_idx(dep_list,nz,pt_info[i].dep);
+        pt_info[i].lon_idx=find_buffer_idx_clamped(lon_list,nx,pt_info[i].lon);
+        pt_info[i].lat_idx=find_buffer_idx_clamped(lat_list,ny,pt_info[i].lat);
+        pt_info[i].dep_idx=find_buffer_idx_clamped(dep_list,nz,pt_info[i].dep);
 
 	/* check if out of range */
-	if(pt_info[i].lon_idx == -1 || pt_info[i].lat_idx == -1 || pt_info[i].dep_idx == -1) {
+	if(pt_info[i].lon_idx < 0 || pt_info[i].lat_idx < 0 || pt_info[i].dep_idx < 0) {
           continue;
         }
 

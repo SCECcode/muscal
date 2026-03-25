@@ -393,7 +393,9 @@ int find_nearest_buffer_idx(float *buffer, size_t nelems, float target) {
 // find  lowest array value that is lower than target
 int find_buffer_idx(float *buffer, size_t nelems, float target) {
     if (nelems < 2) return -1;
+
     if (target < buffer[0] || target > buffer[nelems - 1]) return -1;
+
     int lo = 0, hi = nelems - 2;
     while (lo < hi) {
         int mid = (lo + hi + 1) / 2;
@@ -405,10 +407,37 @@ int find_buffer_idx(float *buffer, size_t nelems, float target) {
     return lo;
 }
 
+
+/* Find bracketing cell index i such that grid[i] <= x <= grid[i+1].
+   If x is outside, returns nearest edge cell index instead of erroring. */
+int find_buffer_idx_clamped(float *buffer, size_t nelems, float target) {
+    if (nelems < 2) return -1;
+
+    if (target <= buffer[0]) {
+        return 0;
+    }
+    if (target >= buffer[nelems - 1]) {
+        return nelems - 2;
+    }
+
+    int lo = 0, hi = nelems - 1;
+    while (hi - lo > 1) {
+        int mid = lo + (hi - lo) / 2;
+        if (buffer[mid] <= target) {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    return lo;
+}
+
 // find the percent of target [0-1] within the cell
 float find_cell_percent(float *buffer, float target, int idx) {
 
     float percent=(target - buffer[idx])/(buffer[idx+1]-buffer[idx]);
+    if(percent < 0.0) percent=0;
+    if(percent > 1.0) percent=1.0;
     return percent;
 }
 
