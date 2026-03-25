@@ -22,7 +22,18 @@ binary_data = on
 #                   250 increments upto 10000
 #                   500 increments upto 30000
 #                   1000 increments upto 99000
-data_file = { "LABEL" : "new", "FILE" : "model_MUSCAL_CANVAS_dll0.01_vardz_cmpd.nc" }
+data_file = { "LABEL" : "new", "FILE" : "model_MUSCAL_CANVAS_dll0.01_vardz_float32_cmpd.nc" }
+ 
+###
+#longitdue:1301 from -126 to -113 
+#latitude:1251  from 31 to 43.5
+#DEPTh:210      from 0 to 99,000 
+#                   50 increments upto 3000 
+#                   100 increments upto 5000
+#                   250 increments upto 10000
+#                   500 increments upto 30000
+#                   1000 increments upto 99000
+#data_file = { "LABEL" : "small", "FILE" : "model_MUSCAL_CANVAS_dll0.01_vardz_cmpd.nc" }
 
 ###
 #longitdue:1301 from -126 to -113 
