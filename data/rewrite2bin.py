@@ -28,18 +28,19 @@ args=sys.argv
 ncfpath=args[1]
 
 loni = load_ncdata(ncfpath, 'longitude')
-print('loni/first/last => ',len(loni), loni[0], loni[(len(loni)-1)])
 lon_cnt=len(loni)
+print('loni/first/last/lon_cnt => ',len(loni), loni[0], loni[(len(loni)-1)], lon_cnt)
 #print(loni)
 
 lati = load_ncdata(ncfpath, 'latitude')
-print('lati/first/last => ',len(lati), lati[0], lati[(len(lati)-1)])
-#print(lati)
 lat_cnt=len(lati)
+print('lati/first/last/lat_cnt => ',len(lati), lati[0], lati[(len(lati)-1)], lat_cnt)
+#print(lati)
+
 depi = load_ncdata(ncfpath, 'depth')
-print('depi/first/last => ',len(depi), depi[0], depi[(len(depi)-1)])
-#print(depi)
 dep_cnt=len(depi)
+print('depi/first/last/dep_cnt => ',len(depi), depi[0], depi[(len(depi)-1)], dep_cnt)
+#print(depi)
 
 vpi = load_ncdata(ncfpath, 'vp')
 vpi_1d=vpi.flatten()
@@ -52,14 +53,14 @@ del vpi_1d
 vsi = load_ncdata(ncfpath, 'vs')
 vsi_1d=vsi.flatten()
 vsi_1d=vsi_1d.astype(np.float32)
-idx = np.where(~np.isnan(vsi_1d))[0][0]
-value = vsi_1d[idx]
-print("ORIG vs", idx, "value =>",value)
+#idx = np.where(~np.isnan(vsi_1d))[0][0]
+#value = vsi_1d[idx]
+#print("ORIG vs idx(", idx, ") value =>",value)
 with open('vs.dat', 'wb') as f:
     vsi_1d.tofile(f)
 del vsi
 del vsi_1d
-check_bindata("vs.dat",idx)
+#check_bindata("vs.dat",idx)
 
 rhoi = load_ncdata(ncfpath, 'rho')
 rhoi_1d=rhoi.flatten()

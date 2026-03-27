@@ -99,6 +99,12 @@ def main():
       url = path + "/" + tarfile 
       download_urlfile(url,tarfile)
       subprocess.check_call(["tar", "-zxvf", tarfile])
+      subprocess.check_call(["mv", "model_MUSCAL_CANVAS_dll0.01_vardz_float32_cmpd.nc", mdir])
+#unpack into vp.dat/vs.dat/rho.dat
+      subprocess.check_call(["./rewrite2bin.py", fname])
+      subprocess.check_call(["mv", "vp.dat", mdir])
+      subprocess.check_call(["mv", "vs.dat", mdir])
+      subprocess.check_call(["mv", "rho.dat", mdir])
 
     print("\nDone!")
 
