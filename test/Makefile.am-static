@@ -1,7 +1,0 @@
-lib_LIBRARIES = libalglib.a
-libalglib_a_SOURCES = alglib/interpolation.cpp
-
-bin_PROGRAMS = rbf_app
-rbf_app_SOURCES = main.c alglib_rbf_wrapper.cpp
-rbf_app_LDADD = libalglib.a
-

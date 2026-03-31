@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+#
+#./query_mod.py ./model_updated_CenCal2.nc -120.52 36.255 0
+#
+
 import sys
 import netCDF4 as nc
 import numpy as np
