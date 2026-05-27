@@ -1,12 +1,13 @@
-plot_horizontal_slice.py -d vs -c muscal -s 0.073 -a sd -o muscal_1d_h_0_A.png -n $UCVM_INSTALL_PATH/conf/ucvm.conf -i $UCVM_INSTALL_PATH -b 33.1131,-123.0341 -u 38.5992,-113.3752 -e 0 -A 0,1
 
-#plot_horizontal_slice.py -d vs -c muscal -s 0.073 -a sd -o muscal_pure_h_250.png -n $UCVM_INSTALL_PATH/conf/ucvm.conf -i $UCVM_INSTALL_PATH -b 33.1131,-123.0341 -u 38.5992,-113.3752 -e 250 
+plot_horizontal_slice.py -d vs -c muscal -o muscal_pure_h_0.png -n $UCVM_INSTALL_PATH/conf/ucvm.conf -i $UCVM_INSTALL_PATH -s 0.053 -a sd -b 31,-120 -u 35,-113 -e 1000
 
-#plot_horizontal_slice.py -d vs -c muscal -s 0.073 -a sd -o muscal_pure_h_500.png -n $UCVM_INSTALL_PATH/conf/ucvm.conf -i $UCVM_INSTALL_PATH -b 33.1131,-123.0341 -u 38.5992,-113.3752 -e 500
+plot_horizontal_slice.py -d vs -c muscal -o muscal_pure_h_250.png -n $UCVM_INSTALL_PATH/conf/ucvm.conf -i $UCVM_INSTALL_PATH -s 0.053 -a sd -b 31,-120 -u 35,-113 -e 250 
 
-#plot_horizontal_slice.py -d vs -c muscal -s 0.073 -a sd -o muscal_pure_h_1k.png -n $UCVM_INSTALL_PATH/conf/ucvm.conf -i $UCVM_INSTALL_PATH -b 33.1131,-123.0341 -u 38.5992,-113.3752 -e 1000
+plot_horizontal_slice.py -d vs -c muscal -o muscal_pure_h_500.png -n $UCVM_INSTALL_PATH/conf/ucvm.conf -i $UCVM_INSTALL_PATH -s 0.053 -a sd -b 31,-120 -u 35,-113 -e 500 
 
-#plot_cross_section.py -s 0 -h 8872.1896 -d vs -c muscal -a sd -o muscal_pure_x.png -n $UCVM_INSTALL_PATH/conf/ucvm.conf -i $UCVM_INSTALL_PATH -v 990 -b 35.2973,-123.0651 -u 35.348,-113.2821 -e 99000 
+plot_horizontal_slice.py -d vs -c muscal -o muscal_pure_h_1k.png -n $UCVM_INSTALL_PATH/conf/ucvm.conf -i $UCVM_INSTALL_PATH -s 0.053 -a sd -b 31,-120 -u 35,-113 -e 1000
+
+plot_cross_section.py -s 0 -h 8872.1896 -d vs -c muscal -a sd -o muscal_pure_x.png -n $UCVM_INSTALL_PATH/conf/ucvm.conf -i $UCVM_INSTALL_PATH -v 990 -b 35.2973,-123.0651 -u 35.348,-113.2821 -e 99000 
 
 
 
