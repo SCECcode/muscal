@@ -38,12 +38,19 @@ to the model's authors, located in the AUTHORS file.
 To install this package on your computer, please run the following commands:
 
 <pre>
-  aclocal
+  libtoolize --copy --force
+  aclocal -I m4
   autoconf
-  automake --add-missing
+  automake --add-missing --force-missing
   ./configure --prefix=/dir/to/install
   make
   make install
+</pre>
+
+<pre>
+example:
+
+./configure --prefix=$UCVM_INSTALL_PATH --enable-shared CPPFLAGS='-I$UCVM_INSTALL_PATH/lib/hdf5/include -I$UCVM_INSTALL_PATH/lib/netcdf/include' LDFLAGS='-L$UCVM_INSTALL_PATH/lib/hdf5/lib -L$UCVM_INSTALL_PATH/lib/netcdf/lib -Wl,-rpath,$UCVM_INSTALL_PATH/lib/hdf5/lib -Wl,-rpath,$UCVM_INSTALL_PATH/lib/netcdf/lib' LIBS='-lhdf5 -lnetcdf'
 </pre>
 
 ### muscal_query
