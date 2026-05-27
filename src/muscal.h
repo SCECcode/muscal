@@ -25,9 +25,10 @@
 
 /* config string */
 #define MUSCAL_CONFIG_MAX 1000
-#define MUSCAL_DATASET_MAX 10
+#define MUSCAL_DATASET_MAX 1
 
 extern int muscal_ucvm_debug;
+extern int muscal_ucvm_debug_detail;
 extern FILE *stderrfp;
 
 // Structures
@@ -76,11 +77,15 @@ typedef struct muscal_configuration_t {
 	int use_binary;
 	/** too_big on or off (1 or 0) */
 	int too_big;
+	/** add muscal1d on or off (1 or 0) */
+	int enable_1d;
 
         /* how many datasets are in the model */
         int dataset_cnt;
         char *dataset_files[MUSCAL_DATASET_MAX];  //strdup
 	char *dataset_labels[MUSCAL_DATASET_MAX]; // strdup
+        char *surface_files[MUSCAL_DATASET_MAX];  //strdup
+        int surface_counts[MUSCAL_DATASET_MAX];
 						  
 } muscal_configuration_t;
 

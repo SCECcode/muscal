@@ -6,10 +6,13 @@
 #ifndef MUSCAL_UTIL_H
 #define MUSCAL_UTIL_H
 
-#define MUSCAL_DATASET_MAX 10
+// setup for future possible expansion
+#define MUSCAL_DATASET_MAX 1
 
 #define MUSCAL_CACHE_LAYER_MAX 20
 #define MUSCAL_CACHE_COL_MAX 10
+
+#include "kdtree_util.h"
 
 typedef struct muscal_properties_t muscal_properties_t;
 
@@ -41,6 +44,9 @@ typedef struct muscal_dataset_t {
 	int ny;
 	/** Number of z(dep) points */
 	int nz;
+
+        /* surfaces  */
+        KDNodeSetup *kdsurface;
 
 	/** list of longitudes **/
 	float *longitudes;
@@ -90,8 +96,10 @@ muscal_cache_col_t *find_a_cache_col(muscal_dataset_t *dataset, int target_lat_i
 void free_a_cache_col(muscal_cache_col_t *col);
 muscal_cache_layer_t *find_a_cache_layer(muscal_dataset_t *dataset, int target_dep_idx);
 void free_a_cache_layer(muscal_cache_layer_t *layer);
+void add_surface_data(muscal_dataset_t  *data, char *sfile, int s_count);
 
 int get_one_property(muscal_dataset_t *dataset, muscal_pt_info_t *pt, muscal_properties_t *data);
+int get_one_muscal1d_property(muscal_dataset_t *dataset, muscal_pt_info_t *pt, muscal_properties_t *data);
 void get_interp_property(muscal_dataset_t *dataset, muscal_pt_info_t *pt, muscal_properties_t *data);
 
 

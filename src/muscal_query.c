@@ -16,7 +16,7 @@
 #include "ucvm_model_dtypes.h"
 #include "muscal.h"
 
-int muscal_debug=0;
+int muscal_debug=1;
 
 int _compare_double(double f1, double f2) {
   double precision = 0.00001;

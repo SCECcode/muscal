@@ -10,6 +10,49 @@
 
 #include "muscal_util.h"
 
+
+
+/*** for surface data ***/
+int free_kdnodesetup(KDNodeSetup *sptr) {
+  free(sptr->pnts);
+  free(sptr->vpnts);
+  free_kdtree(sptr->nodes);
+  free(sptr); 
+  return SUCCESS;
+}
+
+void add_surface_data(muscal_dataset_t  *data, char  *filepath, int sz) {
+
+  double lat, lon, depth, vs, vp, density;
+  char line[KD_MAX_LINE];
+
+  KDNodeSetup *kdsurface = (KDNodeSetup *) malloc(1 * sizeof(KDNodeSetup)); ;
+
+  kdsurface->pnts = malloc(sz * sizeof(KDlld));
+  kdsurface->vpnts = malloc(sz * sizeof(KDVec3));
+
+  FILE *fp=fopen(filepath,"r");
+
+  int numread=0;
+// read all the points
+  while (numread != sz && fgets(line, KD_MAX_LINE, fp) != NULL ) {
+      if(line[0]=='#') continue;  // a comment line
+      if (sscanf(line,"%lf %lf %lf %lf %lf %lf", &lon, &lat, &depth, &vp, &vs, &density) == 6) {
+         kdsurface->pnts[numread].lat=lat;
+         kdsurface->pnts[numread].lon=lon;
+         kdsurface->pnts[numread].depth=depth;
+         kdsurface->pnts[numread].vs=vs;
+         kdsurface->pnts[numread].vp=vp;
+         kdsurface->pnts[numread].density=density;
+         lld_to_xyz(&kdsurface->vpnts[numread], lat, lon, depth, numread);
+         numread++;
+      }
+  }
+  fclose(fp);
+  kdsurface->nodes = build_kdtree(kdsurface->vpnts, numread, 0);
+  data->kdsurface=kdsurface;
+}
+
 /**** for muscal_dataset_t ****/
 muscal_dataset_t *make_a_muscal_dataset(char *datadir, char *datafile, int tooBig, int useBinary) {
     char filepath[256];
@@ -27,7 +70,7 @@ muscal_dataset_t *make_a_muscal_dataset(char *datadir, char *datafile, int tooBi
 /* setup nx/ny/nz and void ptrs */
     data->longitudes=(float *) get_nc_float_buffer(data->ncid, "longitude", filepath, &vtype, &nelems, 1);
     data->nx=nelems;
-    if(muscal_ucvm_debug) {
+    if(muscal_ucvm_debug_detail) {
         fprintf(stderrfp, "  Longitudes: %d\n", nelems);
         for(int i=0;i<nelems; i++) {
             fprintf(stderrfp, "%d  %f\n", i, data->longitudes[i]);
@@ -36,7 +79,7 @@ muscal_dataset_t *make_a_muscal_dataset(char *datadir, char *datafile, int tooBi
 
     data->latitudes=(float *) get_nc_float_buffer(data->ncid, "latitude", filepath, &vtype, &nelems, 1);
     data->ny=nelems;
-    if(muscal_ucvm_debug) {
+    if(muscal_ucvm_debug_detail) {
         fprintf(stderrfp, "  Latitude: %d\n", nelems);
         for(int i=0;i<nelems; i++) {
             fprintf(stderrfp, "%d  %f\n", i, data->latitudes[i]);
@@ -45,7 +88,7 @@ muscal_dataset_t *make_a_muscal_dataset(char *datadir, char *datafile, int tooBi
 
     data->depths=(float *) get_nc_float_buffer(data->ncid, "depth", filepath, &vtype, &nelems, 1);
     data->nz=nelems;
-    if(muscal_ucvm_debug) {
+    if(muscal_ucvm_debug_detail) {
         fprintf(stderrfp, "  Depths: %d\n", nelems);
         for(int i=0;i<nelems; i++) {
             fprintf(stderrfp, "%d  %f\n", i, data->depths[i]);
@@ -59,8 +102,8 @@ muscal_dataset_t *make_a_muscal_dataset(char *datadir, char *datafile, int tooBi
 
     data->layer_cache_cnt=0;
     data->col_cache_cnt=0;
-
     data->in_memory =0;
+    data->kdsurface=NULL;
 
     if(!tooBig) {
 /* load all vp/vs/rho data in memory */
@@ -100,6 +143,10 @@ int free_muscal_dataset(muscal_dataset_t *data) {
     if(data->rho_buffer != NULL) free(data->rho_buffer);
     nc_close(data->ncid);
 
+    if(data->kdsurface!=NULL) {
+      free_kdnodesetup(data->kdsurface);
+    }
+
     //free the caches
     for(int i=0; i< data->layer_cache_cnt; i++) {
       free_a_cache_layer(data->layer_cache[i]);
@@ -131,6 +178,32 @@ int get_one_property(muscal_dataset_t *dataset, muscal_pt_info_t *pt, muscal_pro
     data->vs=dataset->vs_buffer[offset];
     data->rho=dataset->rho_buffer[offset];
     return offset;
+}
+
+int get_one_muscal1d_property(muscal_dataset_t *dataset, muscal_pt_info_t *pt, muscal_properties_t *data) {
+// XX
+    if(muscal_ucvm_debug) { fprintf(stderrfp,"\ncalling get_one_muscal1d_property\n"); }
+
+    KDVec3 *best=NULL;
+    float best_dist=FLT_MAX;
+    int best_idx=0;
+
+    KDVec3 query;
+    KDNodeSetup *kdsurface=dataset->kdsurface;
+    KDlld *pnts=kdsurface->pnts;
+
+    lld_to_xyz(&query, pt->lat, pt->lon, pt->dep, 0);
+    kdtree_nearest(kdsurface->nodes, &query, &best, &best_dist);
+    best_idx=best->lldindex;
+
+    if(muscal_ucvm_debug) { 
+      fprintf(stderrfp,"FOUND: %d(%lf):   %lf %lf %lf\n\n", best_idx, best_dist, pnts[best_idx].lon, pnts[best_idx].lat, pnts[best_idx].depth);
+    }
+
+    data->vp=pnts[best_idx].vp;
+    data->vs=pnts[best_idx].vs;
+    data->rho=pnts[best_idx].density;
+    return best_idx;
 }
 
 

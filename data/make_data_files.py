@@ -106,6 +106,15 @@ def main():
       subprocess.check_call(["mv", "vs.dat", mdir])
       subprocess.check_call(["mv", "rho.dat", mdir])
 
+    fname=mdir+"/surface_945765.in"
+    url = path + "/" + fname 
+    print(url, fname)
+    if not os.path.isfile(fname) :
+      try:
+         download_urlfile(url,fname)
+i     except:
+         sys.exit(1)
+ 
     print("\nDone!")
 
 if __name__ == "__main__":

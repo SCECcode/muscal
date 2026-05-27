@@ -1,14 +1,13 @@
+plot_horizontal_slice.py -d vs -c muscal -s 0.073 -a sd -o muscal_1d_h_0_A.png -n $UCVM_INSTALL_PATH/conf/ucvm.conf -i $UCVM_INSTALL_PATH -b 33.1131,-123.0341 -u 38.5992,-113.3752 -e 0 -A 0,1
 
-cc -fPIC -DDYNAMIC_LIBRARY -g -O2 -I$UCVM_INSTALL_PATH/model/muscal/include  -o cJSON.o -c cJSON.c 
-cc -fPIC -g -c um_netcdf.c -o um_netcdf.o -I$UCVM_INSTALL_PATH/lib/hdf5/include -I$UCVM_INSTALL_PATH/lib/netcdf/include 
+#plot_horizontal_slice.py -d vs -c muscal -s 0.073 -a sd -o muscal_pure_h_250.png -n $UCVM_INSTALL_PATH/conf/ucvm.conf -i $UCVM_INSTALL_PATH -b 33.1131,-123.0341 -u 38.5992,-113.3752 -e 250 
 
-cc -fPIC -g -c muscal_query.c -o muscal_query.o -I$UCVM_INSTALL_PATH/lib/hdf5/include -I$UCVM_INSTALL_PATH/lib/netcdf/include 
+#plot_horizontal_slice.py -d vs -c muscal -s 0.073 -a sd -o muscal_pure_h_500.png -n $UCVM_INSTALL_PATH/conf/ucvm.conf -i $UCVM_INSTALL_PATH -b 33.1131,-123.0341 -u 38.5992,-113.3752 -e 500
 
-cc -fPIC -g -c muscal.c -o muscal.o -I$UCVM_INSTALL_PATH/lib/hdf5/include -I$UCVM_INSTALL_PATH/lib/netcdf/include 
-cc -fPIC -g -c muscal_util.c -o muscal_util.o -I$UCVM_INSTALL_PATH/lib/hdf5/include -I$UCVM_INSTALL_PATH/lib/netcdf/include 
+#plot_horizontal_slice.py -d vs -c muscal -s 0.073 -a sd -o muscal_pure_h_1k.png -n $UCVM_INSTALL_PATH/conf/ucvm.conf -i $UCVM_INSTALL_PATH -b 33.1131,-123.0341 -u 38.5992,-113.3752 -e 1000
 
-ar rcs libmuscal.a muscal.o cJSON.o muscal_util.o um_netcdf.o
+#plot_cross_section.py -s 0 -h 8872.1896 -d vs -c muscal -a sd -o muscal_pure_x.png -n $UCVM_INSTALL_PATH/conf/ucvm.conf -i $UCVM_INSTALL_PATH -v 990 -b 35.2973,-123.0651 -u 35.348,-113.2821 -e 99000 
 
-cc muscal_query.o -o muscal_query libmuscal.a -I$UCVM_INSTALL_PATH/lib/hdf5/include -I$UCVM_INSTALL_PATH/lib/netcdf/include -L$UCVM_INSTALL_PATH/lib/hdf5/lib -lhdf5 -L$UCVM_INSTALL_PATH/lib/netcdf/lib -lnetcdf -lm
+
 
 

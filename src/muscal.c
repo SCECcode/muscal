@@ -14,10 +14,9 @@
 #include "um_netcdf.h"
 #include "cJSON.h"
 
-int muscal_ucvm_debug=0;
+int muscal_ucvm_debug=1;
+int muscal_ucvm_debug_detail=0;
 FILE *stderrfp=NULL;
-
-int _ON=0;
 
 /** The config of the model */
 char *muscal_config_string=NULL;
@@ -54,7 +53,7 @@ int muscal_init(const char *dir, const char *label) {
 
     if(muscal_ucvm_debug) {
       stderrfp = fopen("muscal_debug.log", "w+");
-      fprintf(stderrfp," ===== START ===== \n");
+      fprintf(stderrfp,"\n===== START muscal ===== \n\n");
     }
 
     // Initialize variables.
@@ -212,7 +211,16 @@ if(muscal_ucvm_debug){ fprintf(stderrfp,">> Using In-Memory access \n"); }
                 get_one_property(dataset, &(pt_info[i]), &(data[i]));
                 } else {
                     get_interp_property(dataset, &(pt_info[i]), &(data[i]));
-           }
+            }
+
+	    // If result is None, then need to process for muscal1d
+	    // with muscal1d with depth
+	    // if depth within GTL, the do vs interp ??
+            if(isnan(data[i].vp) && isnan(data[i].vs) && muscal_configuration->enable_1d) {
+
+if(muscal_ucvm_debug){ fprintf(stderrfp,">> calling get_one_nuscal1d_property\n"); }
+                get_one_muscal1d_property(dataset, &(pt_info[i]), &(data[i]));
+            }
         }
 
     } else { 
@@ -310,7 +318,7 @@ int muscal_finalize() {
     }
 
     if(muscal_ucvm_debug) {
-     fprintf(stderrfp,"DONE:\n"); 
+     fprintf(stderrfp,"::DONE::\n"); 
      fclose(stderrfp);
     }
 
@@ -367,8 +375,8 @@ int muscal_config(char **config, int *sz)
 int muscal_read_configuration(char *file, muscal_configuration_t *config) {
     FILE *fp = fopen(file, "r");
     char key[40];
-    char value[100];
-    char line_holder[128];
+    char value[1000];
+    char line_holder[2000];
     config->dataset_cnt=0;
 
     // If our file pointer is null, an error has occurred. Return fail.
@@ -379,6 +387,7 @@ int muscal_read_configuration(char *file, muscal_configuration_t *config) {
 
         if (line_holder[0] != '#' && line_holder[0] != ' ' && line_holder[0] != '\n') {
             _splitline(line_holder, key, value);
+            if(muscal_ucvm_debug){ fprintf(stderrfp, "a config line: %s\n", line_holder); }
 
             // Which variable are we editing?
             if (strcmp(key, "utm_zone") == 0) config->utm_zone = atoi(value);
@@ -399,6 +408,12 @@ if(muscal_ucvm_debug){ fprintf(stderrfp, "enabled Binary data\n"); }
                 config->too_big=0;
                 if (strcmp(value,"on") == 0) { config->too_big=1;
 if(muscal_ucvm_debug){ fprintf(stderrfp, "enabled tooBig -- use external data access\n"); }
+                }
+            }
+            if (strcmp(key, "enable_1d") == 0) { 
+                config->enable_1d=0;
+                if (strcmp(value,"on") == 0) { config->enable_1d=1;
+if(muscal_ucvm_debug){ fprintf(stderrfp, "enabled muscal1d to fill all empty returns\n"); }
                 }
             }
          /* for each dataset, allocate a model dataset's block and fill in */ 
@@ -450,7 +465,18 @@ int _setup_a_dataset(muscal_configuration_t *config, char *blobstr) {
     if(cJSON_IsString(file)){
         config->dataset_files[idx]=strdup(file->valuestring);
     }
-
+    cJSON *surface = cJSON_GetObjectItemCaseSensitive(confjson, "SURFACE");
+    if(cJSON_IsString(surface)){
+        config->surface_files[idx]=strdup(surface->valuestring);
+        } else {
+            config->surface_files[idx]=NULL;
+    }
+    cJSON *surface_count = cJSON_GetObjectItemCaseSensitive(confjson, "SURFACE_COUNT");
+    if(cJSON_IsNumber(surface_count)) {
+        config->surface_counts[idx]=surface_count->valueint;
+        } else {
+          config->surface_counts[idx]=0;
+    }
     return 1;
 }
 
@@ -502,7 +528,15 @@ int muscal_read_model(muscal_configuration_t *config, muscal_model_t *model, cha
     int max_idx=model->dataset_cnt; // how many datasets are there
     for(int i=0; i<max_idx;i++) { 
         muscal_dataset_t *data=make_a_muscal_dataset(datadir, config->dataset_files[i], config->too_big, config->use_binary); 
-// put into the velocity model
+        /* read in the surface data if enabled */
+        if(config->enable_1d) {
+           char filepath[256];
+           int count=config->surface_counts[i];
+           sprintf(filepath, "%s/%s", datadir, config->surface_files[i]);
+           if(muscal_ucvm_debug) fprintf(stderrfp," data file ..%s\n", filepath);
+           add_surface_data(data, filepath, count);
+        }
+
         model->datasets[i]=data;
     }
     return SUCCESS;
@@ -518,6 +552,8 @@ int muscal_configuration_finalize(muscal_configuration_t *config) {
     for(int i=0; i<max_idx;i++) { 
         free(config->dataset_labels[i]);  
         free(config->dataset_files[i]);  
+        if(config->surface_files[i]!=NULL)
+          free(config->surface_files[i]);  
     }
     free(config);
     return SUCCESS;
