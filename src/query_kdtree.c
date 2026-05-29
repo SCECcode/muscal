@@ -22,7 +22,7 @@ void usage() {
 }
 
 #define KD_MAX_LINE 1000
-int muscal_ucvm_debug=1;
+int muscal_ucvm_debug=0;
 int muscal_ucvm_debug_detail=0;
 FILE *stderrfp=NULL;
 
@@ -100,7 +100,11 @@ int main(int argc, char **argv)
       if(sscanf(line,"%lf %lf %lf", &lon, &lat, &depth) == 3) {
          if(muscal_ucvm_debug) { fprintf(stderrfp,"  query point -> lat(%lf) lon(%lf) depth(%lf) \n", lat, lon, depth); }
 	 lld_to_xyz(&query, lat, lon, depth, 0);
-	 kdtree_nearest(nodes, &query, &best, &best_dist);
+         if(muscal_ucvm_debug_detail) {
+	   kdtree_nearest_full(pnts,nodes, &query, &best, &best_dist);
+           } else {
+	     kdtree_nearest(nodes, &query, &best, &best_dist);
+         }
          int best_idx=best->lldindex;
          if(muscal_ucvm_debug) { 
 fprintf(stderrfp,"FOUND: %d(%lf):   %lf %lf %lf\n", best_idx, best_dist, pnts[best_idx].lon, pnts[best_idx].lat, pnts[best_idx].depth);

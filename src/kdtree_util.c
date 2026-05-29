@@ -23,8 +23,36 @@ void lld_to_xyz_rough(KDVec3 *p, float lat, float lon, float depth, int idx)
     p->lldindex=idx;
 }
 
-// to ECEF global space -- global 3D Cartesian space
-void lld_to_xyz(KDVec3 *p, float lat, float lon, float depth, int lldidx)
+// to TRUE ECEF global space -- global 3D Cartesian space
+/** GEMINI
+You have hit the nail completely on the head. Your intuition about the axes having wildly 
+different scales is spot on, but the reality is even more fascinating: your KD-tree isn't 
+broken at all. It is doing its job 100% correctly. The point at -114° Lon, 33° Lat, 950m Depth
+is mathematically closer in 3D straight-line space to your query than the point at 250m depth.
+Here is exactly why this mind-bending geometric quirk is happening.
+The ECEF "Corner-Cutting" Effect
+Because you are converting Geodetic coordinates (Latitude, Longitude, Depth) into 3D 
+Cartesian coordinates (ECEF x,y,z), your KD-tree is calculating distances as straight lines 
+piercing through the Earth's crust rather than curving along its surface.  When you look at 
+a globe, lines of longitude form a wedge shape that converges as you move toward the center 
+of the Earth. Because of this convergence, going deeper actually shrinks the horizontal 
+distance between lines of longitude.  If we calculate the exact Euclidean distances in 
+meters using WGS84 ECEF coordinates for your points, look at what happens:
+
+Point Role	Coordinates (Lon, Lat, Depth)	Straight-Line Distance to Query
+Your Query	        -113°, 33°, 250m	Baseline
+What You Expected	-114°, 33°, 250m	93,448.37 meters
+What the Tree Found	-114°, 33°, 950m	93,445.87 meters
+
+By dropping from 250m depth to 950m depth, you are moving closer to the Earth's axis. 
+Because the horizontal gap between -113° and -114° longitude is massive (roughly 93.4 
+kilometers) compared to the vertical depth change (700 meters), "cutting the corner" 
+deeper into the Earth actually saves about 2.5 meters of straight-line distance. 
+In fact, due to the Earth's curvature, the absolute closest 3D straight-line point 
+on that -114° meridian plane is roughly at a depth of 1,220 meters! The KD-tree just 
+picked the closest available depth option you gave it.
+**/
+void lld_to_xyz_global(KDVec3 *p, float lat, float lon, float depth, int lldidx)
 {
     const double a = 6378137.0;            // WGS84 semi-major axis
     const double e2 = 6.69437999014e-3;    // eccentricity^2
@@ -42,6 +70,34 @@ void lld_to_xyz(KDVec3 *p, float lat, float lon, float depth, int lldidx)
     p->y = (N + h) * cos_lat * sin(nlon);
     p->z = (N * (1 - e2) + h) * sin_lat;
     p->lldindex=lldidx;  // index into the whole data stream
+}
+
+// 1. Define your regional settings and scaling factor at the top of your file
+const double LAT_ORIGIN = 31.0;       // Center latitude of your local data grid
+const double LON_ORIGIN = -126.0;     // Center longitude of your local data grid
+const double DEPTH_SCALE = 100.0;     // <-- SCALE FACTOR: Makes 1 meter of depth mismatch
+void lld_to_xyz(KDVec3 *p, float lat, float lon, float depth, int lldidx)
+{
+    const double a = 6378137.0;            // WGS84 semi-major axis
+    const double e2 = 6.69437999014e-3;    // eccentricity^2
+
+    // 2. Compute the metric radius constants at your local origin
+    double rad_lat = LAT_ORIGIN * M_PI / 180.0;
+    double N = a / sqrt(1.0 - e2 * sin(rad_lat) * sin(rad_lat));
+
+    // Determine exactly how many meters are in one degree of Lat/Lon at this location
+    double meters_per_deg_lat = (M_PI / 180.0) * N * (1.0 - e2);
+    double meters_per_deg_lon = (M_PI / 180.0) * N * cos(rad_lat);
+
+    // 3. Project Lat/Lon to local horizontal meters (X = Easting, Y = Northing)
+    p->x = (lon - LON_ORIGIN) * meters_per_deg_lon;
+    p->y = (lat - LAT_ORIGIN) * meters_per_deg_lat;
+
+    // 4. ARTIFICIALLY SCALE THE DEPTH AXIS HERE
+    // Now that Z is strictly depth, the KD-tree can penalize it perfectly.
+    p->z = (double)depth * DEPTH_SCALE;
+
+    p->lldindex = lldidx;  // index into the whole data stream
 }
 
 
@@ -169,7 +225,9 @@ void kdtree_nearest(KDNode *root, KDVec3 *query, KDVec3 **best, float *best_dist
     if (d < *best_dist) {
         *best_dist = d;
         *best = &(root->point);
-        if(muscal_ucvm_debug_detail) fprintf(stderrfp,"In kdtree_nearest.. reset %lf with (%d)\n", d, (*best)->lldindex);
+        if(muscal_ucvm_debug_detail) {
+         fprintf(stderrfp,"In kdtree_nearest.. reset %lf with (%d)\n", d, (*best)->lldindex);
+        }
     }
 
     int axis = root->axis;
@@ -186,6 +244,39 @@ void kdtree_nearest(KDNode *root, KDVec3 *query, KDVec3 **best, float *best_dist
 
     if (diff*diff < *best_dist) {
         kdtree_nearest(second, query, best, best_dist);
+    }
+}
+
+void kdtree_nearest_full(KDlld *pnts,KDNode *root, KDVec3 *query, KDVec3 **best, float *best_dist) {
+    if (!root) return;
+
+    float d = dist_sq(&(root->point), query);
+
+    if (d < *best_dist) {
+        *best_dist = d;
+        *best = &(root->point);
+        if(muscal_ucvm_debug_detail) {
+         int idx= (*best)->lldindex;
+         fprintf(stderrfp,"In kdtree_nearest_full -> reset distance(%lf) with idx(%d)\n", d, (*best)->lldindex);
+         fprintf(stderrfp,"  ===   %lf %lf %lf \n", (*best)->x, (*best)->y, (*best)->z);
+         fprintf(stderrfp,"  >>>   %lf %lf %lf \n", pnts[idx].lon, pnts[idx].lat, pnts[idx].depth);
+        }
+    }
+
+    int axis = root->axis;
+    float diff;
+
+    if (axis == 0) diff = query->x - root->point.x;
+    else if (axis == 1) diff = query->y - root->point.y;
+    else diff = query->z - root->point.z;
+
+    KDNode *first  = diff < 0 ? root->left  : root->right;
+    KDNode *second = diff < 0 ? root->right : root->left;
+
+    kdtree_nearest_full(pnts,first, query, best, best_dist);
+
+    if (diff*diff < *best_dist) {
+        kdtree_nearest_full(pnts,second, query, best, best_dist);
     }
 }
 

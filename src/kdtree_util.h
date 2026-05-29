@@ -82,6 +82,7 @@ KDNodeDisk *read_flatten_kdtree(const char *fname, int n);
 /** usage **/
 float dist_sq(KDVec3* a, KDVec3* b);
 void kdtree_nearest(KDNode *root, KDVec3* query, KDVec3 **best, float *best_dist);
+void kdtree_nearest_full(KDlld *pnts, KDNode *root, KDVec3* query, KDVec3 **best, float *best_dist);
 void kdtree_n_nearest(KDNode *root, KDVec3 *query, int N, KDVec3 **best_nodes, float *best_dists);
 
 #endif // KDTREE_UTIL_H

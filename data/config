@@ -15,7 +15,7 @@ binary_data = on
 
 ## enable muscal1d with local vs tapering
 #default should be off.. used when making cybershake mesh
-enable_1d = off 
+enable_1d = on 
 
 ###
 #longitdue:1301 from -126 to -113 
