@@ -53,6 +53,19 @@ example:
 ./configure --prefix=$UCVM_INSTALL_PATH --enable-shared CPPFLAGS='-I$UCVM_INSTALL_PATH/lib/hdf5/include -I$UCVM_INSTALL_PATH/lib/netcdf/include' LDFLAGS='-L$UCVM_INSTALL_PATH/lib/hdf5/lib -L$UCVM_INSTALL_PATH/lib/netcdf/lib -Wl,-rpath,$UCVM_INSTALL_PATH/lib/hdf5/lib -Wl,-rpath,$UCVM_INSTALL_PATH/lib/netcdf/lib' LIBS='-lhdf5 -lnetcdf'
 </pre>
 
+## Note
+
+Optional 1d background base on model's surface/boundary datapoints 
+
+Preprocessing : 
+   Extract all surface points from the MUSCAL file layer by layer and create binary surface_945765.in 
+
+Model initialization :
+   Load surface points and create KDtree of surface points with 3 axis (lon/lat/depth) 
+
+Query access
+   Fill in background with nearest neighboring surface point from surface KDtree 
+
 ### muscal_query
 
 ### muscal_surface
