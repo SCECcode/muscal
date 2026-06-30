@@ -181,7 +181,6 @@ int get_one_property(muscal_dataset_t *dataset, muscal_pt_info_t *pt, muscal_pro
 }
 
 int get_one_muscal1d_property(muscal_dataset_t *dataset, muscal_pt_info_t *pt, muscal_properties_t *data) {
-// XX
     if(muscal_ucvm_debug) { fprintf(stderrfp,"\ncalling get_one_muscal1d_property\n"); }
 
     KDVec3 *best=NULL;
@@ -192,12 +191,21 @@ int get_one_muscal1d_property(muscal_dataset_t *dataset, muscal_pt_info_t *pt, m
     KDNodeSetup *kdsurface=dataset->kdsurface;
     KDlld *pnts=kdsurface->pnts;
 
-    lld_to_xyz(&query, pt->lat, pt->lon, pt->dep, 0);
+// bound the depth idx to nearest layer.. for pt->dep < 50
+    float target_dep=pt->dep;
+    if( pt->dep < 50 ) {
+      int dep_idx=find_buffer_idx_clamped(dataset->depths,dataset->nz,pt->dep);
+      target_dep=dataset->depths[dep_idx];
+    }
+
+    lld_to_xyz(&query, pt->lat, pt->lon, target_dep, 0);
+
     kdtree_nearest(kdsurface->nodes, &query, &best, &best_dist);
     best_idx=best->lldindex;
 
     if(muscal_ucvm_debug) { 
-      fprintf(stderrfp,"FOUND: %d(%lf):   %lf %lf %lf\n\n", best_idx, best_dist, pnts[best_idx].lon, pnts[best_idx].lat, pnts[best_idx].depth);
+      fprintf(stderrfp,"\nFOUND: %d(%lf):   %lf %lf %lf\n", best_idx, best_dist, pnts[best_idx].lon, pnts[best_idx].lat, pnts[best_idx].depth);
+fprintf(stderr,"\nFOUND: %d(%lf):   %lf %lf %lf\n", best_idx, best_dist, pnts[best_idx].lon, pnts[best_idx].lat, pnts[best_idx].depth);
     }
 
     data->vp=pnts[best_idx].vp;

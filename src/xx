@@ -1,0 +1,14 @@
+
+#ucvm_query -m muscal -f $UCVM_INSTALL_PATH/conf/ucvm.conf  -l 31.53,-117,25
+#ucvm_query -m muscal -f $UCVM_INSTALL_PATH/conf/ucvm.conf  -l 31.4625,-117,25
+
+#ucvm_query -m muscal -f $UCVM_INSTALL_PATH/conf/ucvm.conf  -l 31.5,-116.519,25
+#ucvm_query -m muscal -f $UCVM_INSTALL_PATH/conf/ucvm.conf  -l 31.4937,-116.519,0
+ucvm_query -m muscal -f $UCVM_INSTALL_PATH/conf/ucvm.conf  -l 31.4937,-116.519,10
+#ucvm_query -m muscal -f $UCVM_INSTALL_PATH/conf/ucvm.conf  -l 31.4937,-116.519,25
+#ucvm_query -m muscal -f $UCVM_INSTALL_PATH/conf/ucvm.conf  -l 31.4937,-116.519,50
+#ucvm_query -m muscal -f $UCVM_INSTALL_PATH/conf/ucvm.conf  -l 31.4937,-116.519,70
+#ucvm_query -m muscal -f $UCVM_INSTALL_PATH/conf/ucvm.conf  -l 31.4937,-116.519,100
+#ucvm_query -m muscal -f $UCVM_INSTALL_PATH/conf/ucvm.conf  -l 31.4937,-116.519,600
+#ucvm_query -m muscal -f $UCVM_INSTALL_PATH/conf/ucvm.conf  -l 31.4937,-116.519,250
+

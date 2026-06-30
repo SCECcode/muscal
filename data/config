@@ -14,7 +14,8 @@ interpolation = on
 binary_data = on
 
 ## enable muscal1d with local vs tapering
-#default should be off.. used when making cybershake mesh
+#used when making cybershake mesh
+#default should be off
 enable_1d = off 
 
 ###

@@ -14,7 +14,7 @@
 #include "um_netcdf.h"
 #include "cJSON.h"
 
-int muscal_ucvm_debug=1;
+int muscal_ucvm_debug=0;
 int muscal_ucvm_debug_detail=0;
 FILE *stderrfp=NULL;
 
@@ -215,7 +215,6 @@ if(muscal_ucvm_debug){ fprintf(stderrfp,">> Using In-Memory access \n"); }
 
 	    // If result is None, then need to process for muscal1d
 	    // with muscal1d with depth
-	    // if depth within GTL, the do vs interp ??
             if(isnan(data[i].vp) && isnan(data[i].vs) && muscal_configuration->enable_1d) {
 
 if(muscal_ucvm_debug){ fprintf(stderrfp,">> calling get_one_nuscal1d_property\n"); }

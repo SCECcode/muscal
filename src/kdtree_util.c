@@ -75,7 +75,7 @@ void lld_to_xyz_global(KDVec3 *p, float lat, float lon, float depth, int lldidx)
 // 1. Define your regional settings and scaling factor at the top of your file
 const double LAT_ORIGIN = 31.0;       // Center latitude of your local data grid
 const double LON_ORIGIN = -126.0;     // Center longitude of your local data grid
-const double DEPTH_SCALE = 100.0;     // <-- SCALE FACTOR: Makes 1 meter of depth mismatch
+const double DEPTH_SCALE = 100;     // Center longitude of your local data grid
 void lld_to_xyz(KDVec3 *p, float lat, float lon, float depth, int lldidx)
 {
     const double a = 6378137.0;            // WGS84 semi-major axis
@@ -95,7 +95,7 @@ void lld_to_xyz(KDVec3 *p, float lat, float lon, float depth, int lldidx)
 
     // 4. ARTIFICIALLY SCALE THE DEPTH AXIS HERE
     // Now that Z is strictly depth, the KD-tree can penalize it perfectly.
-    p->z = (double)depth * DEPTH_SCALE;
+    p->z = (double) depth * DEPTH_SCALE;
 
     p->lldindex = lldidx;  // index into the whole data stream
 }
