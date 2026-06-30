@@ -12,5 +12,5 @@ ucvm_query -m muscal -f $UCVM_INSTALL_PATH/conf/ucvm.conf <in
 #./query_kdtree 4441 surface_4441.in in
 #more query_debug.log
 
-./query_kdtree 945765 surface_945765.in in
-more query_debug.log
+#./query_kdtree 945765 surface_945765.in in
+#more query_debug.log

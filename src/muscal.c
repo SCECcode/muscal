@@ -10,6 +10,7 @@
 #include <limits.h>
 #include "ucvm_model_dtypes.h"
 #include "muscal.h"
+#include "muscal_dataset.h"
 #include "muscal_util.h"
 #include "um_netcdf.h"
 #include "cJSON.h"

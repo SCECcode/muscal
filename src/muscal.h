@@ -16,7 +16,7 @@
 #include <unistd.h>
 #include <math.h>
 
-#include "muscal_util.h"
+#include "muscal_dataset.h"
 
 /** Defines a return value of success */
 #define SUCCESS 0

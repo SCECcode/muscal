@@ -1,6 +1,6 @@
 # Autoconf/automake file
 
-objects = um_netcdf.o muscal_util.o cJSON.o kdtree_util.o
+objects = um_netcdf.o muscal_dataset.o muscal_util.o cJSON.o kdtree_util.o
 
 # General compiler/linker flags
 AM_CFLAGS = ${CFLAGS} ${CPPFLAGS} -I$(prefix)/include
@@ -24,10 +24,10 @@ clean:
 	rm -rf $(TARGETS)
 	rm -rf *.o
 
-libmuscal.a: muscal_static.o muscal_util.o um_netcdf.o cJSON.o kdtree_util.o
+libmuscal.a: muscal_static.o muscal_dataset.o muscal_util.o um_netcdf.o cJSON.o kdtree_util.o
 	$(AR) rcs $@ $^
 
-libmuscal.so: muscal.o muscal_util.o  um_netcdf.o cJSON.o kdtree_util.o
+libmuscal.so: muscal.o muscal_dataset.o muscal_util.o  um_netcdf.o cJSON.o kdtree_util.o
 	$(CC) -shared $(AM_FCFLAGS) -o libmuscal.so $^ $(AM_LDFLAGS)
 
 muscal.o: muscal.c
