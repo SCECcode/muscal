@@ -112,7 +112,7 @@ def main():
     if not os.path.isfile(fname) :
       try:
          download_urlfile(url,fname)
-i     except:
+      except:
          sys.exit(1)
  
     print("\nDone!")
